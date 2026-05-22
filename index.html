@@ -218,6 +218,9 @@ html[data-theme="dark"] .role-btn.selected{background:var(--bg-inset)}
 html[data-theme="dark"] .form-row input,
 html[data-theme="dark"] .form-row select{background:var(--bg-inset);color:var(--fg)}
 html[data-theme="dark"] .card{background:var(--bg-surface-2);border-color:var(--border)}
+html[data-theme="dark"] .shift-card-am  { background: var(--shift-am-bg);  border-color: var(--shift-am-border); }
+html[data-theme="dark"] .shift-card-pm  { background: var(--shift-pm-bg);  border-color: var(--shift-pm-border); }
+html[data-theme="dark"] .shift-card-noc { background: var(--shift-noc-bg); border-color: var(--shift-noc-border); }
 html[data-theme="dark"] .branch-header{background:var(--bg-surface-2)!important;color:var(--fg);border-left:3px solid var(--ui)}
 html[data-theme="dark"] .roster-item{background:var(--bg-surface);border-color:var(--border)}
 html[data-theme="dark"] .user-tag{background:var(--bg-inset);border-color:var(--border)}
@@ -934,40 +937,40 @@ function renderOverview(){
 
     function weekBlock(weekDates, label, borderColor){
       if(!weekDates.length)return;
-      html+='<div style="font-family:\'Barlow Condensed\',Arial Narrow,sans-serif;font-size:13px;font-weight:700;color:#121755;padding:5px 12px;background:white;border-radius:4px;border-left:3px solid '+borderColor+';display:inline-block;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.04em">'+label+'</div>';
+      html+='<div style="font-family:\'Barlow Condensed\',Arial Narrow,sans-serif;font-size:13px;font-weight:700;color:var(--ui);padding:5px 12px;background:var(--bg-surface);border-radius:4px;border-left:3px solid '+borderColor+';display:inline-block;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.04em">'+label+'</div>';
       html+='<div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:20px">';
       weekDates.forEach(function(date){
         const dayShifts=bShifts.filter(function(s){return fmtDateISO(s.date)===date;}).sort(function(a,b){return SHIFTS_ORDER.indexOf(a.shift)-SHIFTS_ORDER.indexOf(b.shift);});
         if(!dayShifts.length)return;
         html+='<div style="min-width:195px;flex:1;max-width:250px">';
-        html+='<div style="font-family:\'Barlow Condensed\',Arial Narrow,sans-serif;font-size:15px;font-weight:700;color:#1D1D1F;margin-bottom:8px;padding:7px 12px;background:white;border-radius:4px;border:1px solid #E1E0E0;border-bottom:2px solid '+borderColor+'">'+fmtDate(date)+'</div>';
+        html+='<div style="font-family:\'Barlow Condensed\',Arial Narrow,sans-serif;font-size:15px;font-weight:700;color:var(--fg);margin-bottom:8px;padding:7px 12px;background:var(--bg-surface);border-radius:4px;border:1px solid var(--border);border-bottom:2px solid '+borderColor+'">'+fmtDate(date)+'</div>';
         html+='<div style="display:flex;flex-direction:column;gap:8px">';
         dayShifts.forEach(function(s){
           const en=s.enrolled||[];
           const vac=Math.max(0,s.limit-en.length);
           const pct=s.limit>0?Math.round((en.length/s.limit)*100):0;
-          const vcol=vac===0?'#E5333D':vac<=2?'#D4920A':'#1FA86A';
-          const fillColor=pct>=100?'#E5333D':pct>=60?'#F7DC4B':'#1FA86A';
-          html+='<div style="background:'+CARD_BG[s.shift]+';border:1.5px solid '+CARD_BORDER[s.shift]+';border-radius:4px;padding:11px 13px">';
+          const vcol=vac===0?'vacantes-zero':vac<=2?'vacantes-low':'vacantes-ok';
+          const fc=pct>=100?'full':pct>=60?'warn':'';
+          html+='<div class="card '+SHIFT_CARD[s.shift]+'" style="padding:11px 13px">';
           html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">';
           html+='<span class="badge '+SHIFT_BADGE[s.shift]+'">'+s.shift+'</span>';
-          html+='<div><span style="font-size:18px;font-weight:800;color:'+vcol+'">'+vac+'</span><span style="font-size:9px;color:#8E8E92;text-transform:uppercase;margin-left:2px">vac</span></div>';
+          html+='<div><span class="'+vcol+'" style="font-size:18px;font-weight:800">'+vac+'</span><span style="font-size:9px;color:var(--fg-subtle);text-transform:uppercase;margin-left:2px">vac</span></div>';
           html+='</div>';
-          html+='<div style="font-size:10px;color:#5C5C5E;font-weight:600;margin-bottom:5px">'+(s.horario||getShiftHours(s.branch,s.shift))+'</div>';
-          html+='<div style="background:#ECEDF1;border-radius:99px;height:4px;overflow:hidden;margin-bottom:6px"><div style="height:100%;width:'+Math.min(pct,100)+'%;background:'+fillColor+';border-radius:99px"></div></div>';
-          html+='<div style="font-size:11px;font-weight:700;color:#1D1D1F;margin-bottom:'+(en.length?'7px':'0')+'">'+en.length+' / '+s.limit+' inscritos</div>';
+          html+='<div style="font-size:10px;color:var(--fg-muted);font-weight:600;margin-bottom:5px">'+(s.horario||getShiftHours(s.branch,s.shift))+'</div>';
+          html+='<div class="progress-bar" style="height:4px;margin:4px 0 6px"><div class="pf '+fc+'" style="width:'+Math.min(pct,100)+'%"></div></div>';
+          html+='<div style="font-size:11px;font-weight:700;color:var(--fg);margin-bottom:'+(en.length?'7px':'0')+'">'+en.length+' / '+s.limit+' inscritos</div>';
           if(en.length){
             html+='<div style="display:flex;flex-direction:column;gap:4px;max-height:130px;overflow-y:auto">';
             en.forEach(function(e,i){
               const initls=e.name.split(' ').map(function(x){return x[0]||'';}).join('').slice(0,2).toUpperCase();
-              html+='<div style="display:flex;align-items:center;gap:6px;padding-bottom:'+(i<en.length-1?'4px':'0')+';border-bottom:'+(i<en.length-1?'1px solid #E1E0E0':'none')+'">';
-              html+='<div style="width:22px;height:22px;border-radius:50%;background:#121755;display:flex;align-items:center;justify-content:center;color:white;font-size:8px;font-weight:700;flex-shrink:0;font-family:\'Barlow Condensed\',Arial Narrow,sans-serif">'+initls+'</div>';
-              html+='<div><div style="font-size:11px;font-weight:600;color:#1D1D1F;line-height:1.2">'+e.name+'</div><div style="font-size:9px;color:#8E8E92;font-family:ui-monospace,\'JetBrains Mono\',SFMono-Regular,Menlo,monospace">'+e.rut+'</div></div>';
+              html+='<div style="display:flex;align-items:center;gap:6px;padding-bottom:'+(i<en.length-1?'4px':'0')+';border-bottom:'+(i<en.length-1?'1px solid var(--border)':'none')+'">';
+              html+='<div style="width:22px;height:22px;border-radius:50%;background:var(--ui);display:flex;align-items:center;justify-content:center;color:white;font-size:8px;font-weight:700;flex-shrink:0;font-family:\'Barlow Condensed\',Arial Narrow,sans-serif">'+initls+'</div>';
+              html+='<div><div style="font-size:11px;font-weight:600;color:var(--fg);line-height:1.2">'+e.name+'</div><div style="font-size:9px;color:var(--fg-subtle);font-family:ui-monospace,\'JetBrains Mono\',SFMono-Regular,Menlo,monospace">'+e.rut+'</div></div>';
               html+='</div>';
             });
             html+='</div>';
           }else{
-            html+='<div style="font-size:11px;color:#8E8E92;font-style:italic">Sin inscritos aún</div>';
+            html+='<div style="font-size:11px;color:var(--fg-subtle);font-style:italic">Sin inscritos aún</div>';
           }
           html+='</div>';
         });
@@ -1175,22 +1178,22 @@ function renderMisTurnos(){
     ${dates.map(date=>{
       const dayShifts=byDate[date].sort((a,b)=>SHIFTS_ORDER.indexOf(a.shift)-SHIFTS_ORDER.indexOf(b.shift));
       return `<div style="min-width:180px;flex:1;max-width:220px">
-        <div style="font-size:13px;font-weight:700;color:#1D1D1F;margin-bottom:8px;padding:7px 11px;background:white;border-radius:4px;border-bottom:2px solid #121755">${fmtDate(date)}</div>
+        <div style="font-size:13px;font-weight:700;color:var(--fg);margin-bottom:8px;padding:7px 11px;background:var(--bg-surface);border-radius:4px;border-bottom:2px solid var(--ui)">${fmtDate(date)}</div>
         <div style="display:flex;flex-direction:column;gap:8px">
           ${dayShifts.map(s=>{
             const myE=(s.enrolled||[]).find(e=>e.rut===myRut);
             const left=myE&&myE.enrolledAt?tLeft(myE.enrolledAt):-1;
             const canCancel=left>0;
             const mins=canCancel?Math.ceil(left/60000):0;
-            return `<div style="background:${CARD_BG[s.shift]};border:1.5px solid ${CARD_BORDER[s.shift]};border-radius:4px;padding:10px 12px">
+            return `<div class="card ${SHIFT_CARD[s.shift]}" style="padding:10px 12px">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
                 <span class="badge ${SHIFT_BADGE[s.shift]}">${s.shift}</span>
-                <span style="font-size:10px;color:#5C5C5E;font-weight:600">${s.horario||getShiftHours(s.branch,s.shift)}</span>
+                <span style="font-size:10px;color:var(--fg-muted);font-weight:600">${s.horario||getShiftHours(s.branch,s.shift)}</span>
               </div>
-              <div style="font-size:11px;color:#5C5C5E;font-weight:600;margin-bottom:6px"><i class="ti ti-building-store" style="font-size:11px;margin-right:3px"></i>${s.branch}</div>
+              <div style="font-size:11px;color:var(--fg-muted);font-weight:600;margin-bottom:6px"><i class="ti ti-building-store" style="font-size:11px;margin-right:3px"></i>${s.branch}</div>
               <div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px">
-                <span style="background:#F0FBF5;color:#1FA86A;border:1px solid #A3DDB8;border-radius:999px;padding:2px 9px;font-size:10px;font-weight:700"><i class="ti ti-check" style="font-size:10px;margin-right:2px"></i>Inscrito</span>
-                ${canCancel?`<span style="background:#FEFBE8;color:#121755;border:1px solid #F7DC4B;border-radius:999px;padding:2px 7px;font-size:10px;font-weight:600"><i class="ti ti-clock" style="font-size:10px;margin-right:2px"></i>${mins} min para cancelar</span>`:`<span style="background:#F2F3F7;color:#5C5C5E;border:1px solid #E1E0E0;border-radius:999px;padding:2px 7px;font-size:10px;font-weight:600">Inscripción cerrada</span>`}
+                <span style="background:var(--shift-am-bg);color:var(--success);border:1px solid var(--shift-am-border);border-radius:999px;padding:2px 9px;font-size:10px;font-weight:700"><i class="ti ti-check" style="font-size:10px;margin-right:2px"></i>Inscrito</span>
+                ${canCancel?`<span style="background:var(--shift-pm-bg);color:var(--ui);border:1px solid var(--shift-pm-border);border-radius:999px;padding:2px 7px;font-size:10px;font-weight:600"><i class="ti ti-clock" style="font-size:10px;margin-right:2px"></i>${mins} min para cancelar</span>`:`<span style="background:var(--bg-surface-2);color:var(--fg-muted);border:1px solid var(--border);border-radius:999px;padding:2px 7px;font-size:10px;font-weight:600">Inscripción cerrada</span>`}
               </div>
             </div>`;
           }).join('')}
