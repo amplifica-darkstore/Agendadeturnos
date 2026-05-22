@@ -262,6 +262,13 @@ html[data-theme="dark"] .logo-dark-only{display:block}
           <div style="font-family:'Barlow Condensed',Arial Narrow,sans-serif;color:var(--fg);font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:0.02em">Agenda Cyber Junio 2026</div>
           <div style="color:var(--fg-muted);font-size:10px">Sistema de inscripción de turnos</div>
         </div>
+        <a id="admin-gestor-btn"
+           href="https://script.google.com/macros/s/AKfycbzCd-fUZjRtUzT_Zn5Q82JBIPyKN9ghBj3eBY4TB-x-MHFULQPyYhd3O1RcCBk-65E/exec"
+           target="_blank" rel="noopener noreferrer"
+           style="display:none;background:var(--ui);color:white;border-radius:var(--r-pill);padding:6px 14px;font-size:11px;font-weight:700;cursor:pointer;text-decoration:none;white-space:nowrap;font-family:'Inter',sans-serif;align-items:center;gap:5px">
+          <i class="ti ti-external-link" style="font-size:12px"></i>
+          Gestor de Apoyos
+        </a>
         <button id="theme-toggle" onclick="toggleTheme()" style="background:transparent;border:1px solid var(--border-strong);border-radius:var(--r-pill);padding:5px 10px;color:var(--fg);cursor:pointer;font-size:12px;display:flex;align-items:center;gap:5px;flex-shrink:0" title="Cambiar tema">
           <i class="ti ti-sun" id="theme-icon" style="font-size:14px"></i>
         </button>
@@ -330,24 +337,24 @@ html[data-theme="dark"] .logo-dark-only{display:block}
       <div style="display:flex;align-items:center;gap:12px">
         <div class="avatar" id="w-avatar">?</div>
         <div>
-          <div style="font-size:14px;font-weight:700;color:#1D1D1F" id="w-name-display"></div>
-          <div style="font-size:11px;color:#8E8E92;font-family:ui-monospace,'JetBrains Mono',SFMono-Regular,Menlo,monospace" id="w-rut-display"></div>
+          <div style="font-size:14px;font-weight:700;color:var(--fg)" id="w-name-display"></div>
+          <div style="font-size:11px;color:var(--fg-subtle);font-family:ui-monospace,'JetBrains Mono',SFMono-Regular,Menlo,monospace" id="w-rut-display"></div>
         </div>
       </div>
       <button class="btn btn-outline btn-sm" onclick="logout()"><i class="ti ti-logout" style="margin-right:4px"></i>Salir</button>
     </div>
-    <div style="background:#FFFFFF;border-radius:4px;border:1px solid #E1E0E0;padding:18px 22px;margin-bottom:16px;box-shadow:0 2px 6px rgba(18,23,85,.06),0 1px 2px rgba(18,23,85,.04)">
+    <div style="background:var(--bg-surface);border-radius:4px;border:1px solid var(--border);padding:18px 22px;margin-bottom:16px;box-shadow:var(--shadow-2)">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-        <div style="background:#121755;color:white;padding:7px 16px;border-radius:999px;font-family:'Barlow Condensed',Arial Narrow,sans-serif;font-size:15px;font-weight:700;display:inline-flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:0.02em">
+        <div style="background:var(--ui);color:white;padding:7px 16px;border-radius:999px;font-family:'Barlow Condensed',Arial Narrow,sans-serif;font-size:15px;font-weight:700;display:inline-flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:0.02em">
           <i class="ti ti-calendar-plus" style="font-size:15px"></i>Selección de turnos
         </div>
       </div>
-      <p style="font-size:14px;color:#5C5C5E;line-height:1.8;margin-bottom:0">
+      <p style="font-size:14px;color:var(--fg-muted);line-height:1.8;margin-bottom:0">
         Acá puedes inscribirte en los turnos para trabajar. Puedes filtrar por sucursal, por horario o por semana.
         <strong>No puedes elegir turnos que se topen en horario ni el mismo turno en distintas sucursales.</strong>
         Una vez seleccionado el turno tienes <strong>20 minutos para cambiarlo</strong>, luego de eso la inscripción no se puede modificar.
         Si necesitas cambiarlo porque no podrás asistir, debes enviar un correo a
-        <a href="mailto:rrhh@amplifica.io" style="color:#121755;font-weight:600">rrhh@amplifica.io</a> explicando el motivo.
+        <a href="mailto:rrhh@amplifica.io" style="color:var(--ui);font-weight:600">rrhh@amplifica.io</a> explicando el motivo.
         <span style="color:#E5333D;font-weight:700"> ⚠ Si te inscribes en un turno y no asistes, los otros turnos que tengas inscritos se eliminarán y no podrás volver a tomar turnos.</span>
       </p>
     </div>
@@ -370,11 +377,11 @@ html[data-theme="dark"] .logo-dark-only{display:block}
       </div>
       <div id="mis-turnos-content"></div>
     </div>
-    <div style="background:#FFFFFF;border-radius:4px;border:1px solid #E1E0E0;padding:12px 16px;margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;box-shadow:0 1px 2px rgba(18,23,85,.04)">
-      <i class="ti ti-filter" style="color:#121755;font-size:16px"></i>
-      <select id="f-branch" onchange="renderWorker()" style="padding:7px 10px;border:1.5px solid #E1E0E0;border-radius:4px;font-size:12px;background:white;color:#1D1D1F;font-family:'Inter',sans-serif;font-weight:500"><option value="">Todas las sucursales</option><option>Quilicura</option><option>Santiago Centro</option><option>Lo Barnechea</option><option>La Reina</option></select>
-      <select id="f-shift" onchange="renderWorker()" style="padding:7px 10px;border:1.5px solid #E1E0E0;border-radius:4px;font-size:12px;background:white;color:#1D1D1F;font-family:'Inter',sans-serif;font-weight:500"><option value="">Todos los turnos</option><option>AM</option><option>PM</option><option>Nocturno</option></select>
-      <select id="f-week" onchange="renderWorker()" style="padding:7px 10px;border:1.5px solid #E1E0E0;border-radius:4px;font-size:12px;background:white;color:#1D1D1F;font-family:'Inter',sans-serif;font-weight:500"><option value="">Todas las semanas</option><option value="1">Semana 1 — 25 al 31 mayo</option><option value="2">Semana 2 — 1 al 7 junio</option><option value="3">Semana 3 — 8 al 12 junio</option></select>
+    <div style="background:var(--bg-surface);border-radius:4px;border:1px solid var(--border);padding:12px 16px;margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;box-shadow:var(--shadow-1)">
+      <i class="ti ti-filter" style="color:var(--ui);font-size:16px"></i>
+      <select id="f-branch" onchange="renderWorker()" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg-surface);color:var(--fg);font-family:'Inter',sans-serif;font-weight:500"><option value="">Todas las sucursales</option><option>Quilicura</option><option>Santiago Centro</option><option>Lo Barnechea</option><option>La Reina</option></select>
+      <select id="f-shift" onchange="renderWorker()" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg-surface);color:var(--fg);font-family:'Inter',sans-serif;font-weight:500"><option value="">Todos los turnos</option><option>AM</option><option>PM</option><option>Nocturno</option></select>
+      <select id="f-week" onchange="renderWorker()" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg-surface);color:var(--fg);font-family:'Inter',sans-serif;font-weight:500"><option value="">Todas las semanas</option><option value="1">Semana 1 — 25 al 31 mayo</option><option value="2">Semana 2 — 1 al 7 junio</option><option value="3">Semana 3 — 8 al 12 junio</option></select>
       <button class="btn btn-outline btn-sm" onclick="loadAndRenderWorker()"><i class="ti ti-refresh" style="margin-right:4px"></i>Actualizar</button>
     </div>
 
@@ -399,22 +406,22 @@ html[data-theme="dark"] .logo-dark-only{display:block}
         <button class="btn btn-sm" onclick="exportOverviewExcel()" style="background:#1FA86A;color:white;border:none;display:flex;align-items:center;gap:5px;border-radius:4px"><i class="ti ti-file-spreadsheet" style="font-size:14px"></i>Descargar Excel</button>
       </div>
     </div>
-    <div style="background:#FFFFFF;border-radius:4px;border:1px solid #E1E0E0;padding:14px 16px;margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;box-shadow:0 1px 2px rgba(18,23,85,.04)">
-      <i class="ti ti-filter" style="color:#121755;font-size:16px"></i>
-      <select id="ov-branch" onchange="renderOverview()" style="padding:7px 10px;border:1.5px solid #E1E0E0;border-radius:4px;font-size:12px;background:white;color:#1D1D1F;font-family:'Inter',sans-serif;font-weight:500">
+    <div style="background:var(--bg-surface);border-radius:4px;border:1px solid var(--border);padding:14px 16px;margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;box-shadow:var(--shadow-1)">
+      <i class="ti ti-filter" style="color:var(--ui);font-size:16px"></i>
+      <select id="ov-branch" onchange="renderOverview()" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg-surface);color:var(--fg);font-family:'Inter',sans-serif;font-weight:500">
         <option value="">Todas las sucursales</option>
         <option>Quilicura</option>
         <option>Santiago Centro</option>
         <option>Lo Barnechea</option>
         <option>La Reina</option>
       </select>
-      <select id="ov-shift" onchange="renderOverview()" style="padding:7px 10px;border:1.5px solid #E1E0E0;border-radius:4px;font-size:12px;background:white;color:#1D1D1F;font-family:'Inter',sans-serif;font-weight:500">
+      <select id="ov-shift" onchange="renderOverview()" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg-surface);color:var(--fg);font-family:'Inter',sans-serif;font-weight:500">
         <option value="">Todos los turnos</option>
         <option>AM</option>
         <option>PM</option>
         <option>Nocturno</option>
       </select>
-      <select id="ov-week" onchange="renderOverview()" style="padding:7px 10px;border:1.5px solid #E1E0E0;border-radius:4px;font-size:12px;background:white;color:#1D1D1F;font-family:'Inter',sans-serif;font-weight:500">
+      <select id="ov-week" onchange="renderOverview()" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:4px;font-size:12px;background:var(--bg-surface);color:var(--fg);font-family:'Inter',sans-serif;font-weight:500">
         <option value="">Todas las semanas</option>
         <option value="1">Semana 1 — 25 al 31 mayo</option>
         <option value="2">Semana 2 — 1 al 7 junio</option>
@@ -1062,6 +1069,7 @@ function doLoginAdmin(){
 function openWorkerPage(){
   allPages('page-worker');document.getElementById('tab-worker').classList.add('active');document.getElementById('tab-admin').classList.remove('active');
   document.getElementById('topbar-actions').innerHTML='';
+  const gb=document.getElementById('admin-gestor-btn');if(gb)gb.style.display='none';
   document.getElementById('w-name-display').textContent=myName;
   document.getElementById('w-rut-display').textContent=myRut;
   document.getElementById('w-avatar').textContent=initials(myName);
@@ -1074,6 +1082,7 @@ function openAdminPage(){
   document.getElementById('tab-worker').classList.remove('active');
   document.getElementById('tab-overview').style.display='flex';
   document.getElementById('topbar-actions').innerHTML=`<span class="adm-badge"><i class="ti ti-shield-check" style="font-size:12px"></i>${myName}</span>`;
+  const gb=document.getElementById('admin-gestor-btn');if(gb)gb.style.display='flex';
   loadAndRenderAdmin();
 }
 
@@ -1102,6 +1111,7 @@ function logout(){
   document.getElementById('form-worker').style.display='none';document.getElementById('form-admin').style.display='none';
   document.getElementById('btn-role-worker').classList.remove('selected');document.getElementById('btn-role-admin').classList.remove('selected');
   document.getElementById('topbar-actions').innerHTML='';
+  const gb=document.getElementById('admin-gestor-btn');if(gb)gb.style.display='none';
   document.getElementById('tab-worker').classList.add('active');document.getElementById('tab-admin').classList.remove('active');
   document.getElementById('tab-overview').style.display='none';
   allPages('page-login');
@@ -1242,7 +1252,7 @@ function renderWorker(){
     const w3=bList.filter(s=>weekOf(s.date)===3);
 
     if(w1.length){
-      html+=`<div style="font-family:'Barlow Condensed',Arial Narrow,sans-serif;font-size:13px;font-weight:700;color:#121755;padding:5px 12px;background:white;border-radius:4px;border-left:3px solid #121755;display:inline-block;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.04em"><i class="ti ti-calendar" style="margin-right:5px"></i>Semana 1 — 25 al 31 de mayo</div>`;
+      html+=`<div style="font-family:'Barlow Condensed',Arial Narrow,sans-serif;font-size:13px;font-weight:700;color:var(--ui);padding:5px 12px;background:var(--bg-surface);border-radius:4px;border-left:3px solid var(--ui);display:inline-block;margin-bottom:12px;text-transform:uppercase;letter-spacing:0.04em"><i class="ti ti-calendar" style="margin-right:5px"></i>Semana 1 — 25 al 31 de mayo</div>`;
       const dates1=[...new Set(w1.map(s=>fmtDateISO(s.date)))].sort((a,b)=>{
           const da=parseDate(a),db=parseDate(b);
           if(!da||!db)return 0;
@@ -1252,7 +1262,7 @@ function renderWorker(){
       dates1.forEach(date=>{
         const dayShifts=w1.filter(s=>fmtDateISO(s.date)===date);
         html+=`<div style="min-width:200px;flex:1;max-width:260px">
-          <div style="font-family:'Barlow Condensed',Arial Narrow,sans-serif;font-size:15px;font-weight:700;color:#1D1D1F;margin-bottom:8px;padding:7px 12px;background:white;border-radius:4px;border:1px solid #E1E0E0;border-bottom:2px solid #121755">${fmtDate(date)}</div>
+          <div style="font-family:'Barlow Condensed',Arial Narrow,sans-serif;font-size:15px;font-weight:700;color:var(--fg);margin-bottom:8px;padding:7px 12px;background:var(--bg-surface);border-radius:4px;border:1px solid var(--border);border-bottom:2px solid var(--ui)">${fmtDate(date)}</div>
           <div style="display:flex;flex-direction:column;gap:8px">${dayShifts.map(s=>shiftCardCompact(s)).join('')}</div>
         </div>`;
       });
@@ -1260,7 +1270,7 @@ function renderWorker(){
     }
 
     if(w2.length){
-      html+=`<div style="font-family:'Barlow Condensed',Arial Narrow,sans-serif;font-size:13px;font-weight:700;color:#121755;padding:5px 12px;background:white;border-radius:4px;border-left:3px solid #1FA86A;display:inline-block;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.04em"><i class="ti ti-calendar" style="margin-right:5px"></i>Semana 2 — 1 al 7 de junio</div>`;
+      html+=`<div style="font-family:'Barlow Condensed',Arial Narrow,sans-serif;font-size:13px;font-weight:700;color:var(--ui);padding:5px 12px;background:var(--bg-surface);border-radius:4px;border-left:3px solid var(--success);display:inline-block;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.04em"><i class="ti ti-calendar" style="margin-right:5px"></i>Semana 2 — 1 al 7 de junio</div>`;
       const dates2=[...new Set(w2.map(s=>fmtDateISO(s.date)))].sort((a,b)=>{
           const da=parseDate(a),db=parseDate(b);
           if(!da||!db)return 0;
@@ -1270,7 +1280,7 @@ function renderWorker(){
       dates2.forEach(date=>{
         const dayShifts=w2.filter(s=>fmtDateISO(s.date)===date);
         html+=`<div style="min-width:200px;flex:1;max-width:260px">
-          <div style="font-family:'Barlow Condensed',Arial Narrow,sans-serif;font-size:15px;font-weight:700;color:#1D1D1F;margin-bottom:8px;padding:7px 12px;background:white;border-radius:4px;border:1px solid #E1E0E0;border-bottom:2px solid #121755">${fmtDate(date)}</div>
+          <div style="font-family:'Barlow Condensed',Arial Narrow,sans-serif;font-size:15px;font-weight:700;color:var(--fg);margin-bottom:8px;padding:7px 12px;background:var(--bg-surface);border-radius:4px;border:1px solid var(--border);border-bottom:2px solid var(--ui)">${fmtDate(date)}</div>
           <div style="display:flex;flex-direction:column;gap:8px">${dayShifts.map(s=>shiftCardCompact(s)).join('')}</div>
         </div>`;
       });
@@ -1278,7 +1288,7 @@ function renderWorker(){
     }
 
     if(w3.length){
-      html+=`<div style="font-family:'Barlow Condensed',Arial Narrow,sans-serif;font-size:13px;font-weight:700;color:#121755;padding:5px 12px;background:white;border-radius:4px;border-left:3px solid #E5333D;display:inline-block;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.04em"><i class="ti ti-calendar" style="margin-right:5px"></i>Semana 3 — 8 al 12 de junio</div>`;
+      html+=`<div style="font-family:'Barlow Condensed',Arial Narrow,sans-serif;font-size:13px;font-weight:700;color:var(--ui);padding:5px 12px;background:var(--bg-surface);border-radius:4px;border-left:3px solid var(--danger);display:inline-block;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.04em"><i class="ti ti-calendar" style="margin-right:5px"></i>Semana 3 — 8 al 12 de junio</div>`;
       const dates3=[...new Set(w3.map(s=>fmtDateISO(s.date)))].sort((a,b)=>{
           const da=parseDate(a),db=parseDate(b);
           if(!da||!db)return 0;
@@ -1288,7 +1298,7 @@ function renderWorker(){
       dates3.forEach(date=>{
         const dayShifts=w3.filter(s=>fmtDateISO(s.date)===date);
         html+=`<div style="min-width:200px;flex:1;max-width:260px">
-          <div style="font-family:'Barlow Condensed',Arial Narrow,sans-serif;font-size:15px;font-weight:700;color:#1D1D1F;margin-bottom:8px;padding:7px 12px;background:white;border-radius:4px;border:1px solid #E1E0E0;border-bottom:2px solid #E5333D">${fmtDate(date)}</div>
+          <div style="font-family:'Barlow Condensed',Arial Narrow,sans-serif;font-size:15px;font-weight:700;color:var(--fg);margin-bottom:8px;padding:7px 12px;background:var(--bg-surface);border-radius:4px;border:1px solid var(--border);border-bottom:2px solid var(--danger)">${fmtDate(date)}</div>
           <div style="display:flex;flex-direction:column;gap:8px">${dayShifts.map(s=>shiftCardCompact(s)).join('')}</div>
         </div>`;
       });
@@ -1899,9 +1909,3 @@ try{
 </script>
 </body>
 </html>
-apps-fileview.texmex_20260507.00_p2
-index.html
-Displaying index.html.
-apps-fileview.texmex_20260507.00_p2
-index.html
-Displaying index.html.
