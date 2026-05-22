@@ -247,13 +247,12 @@ html[data-theme="dark"] .logo-dark-only{display:block}
     <!-- Brand bar -->
     <div class="topbar-brand" style="padding:10px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;width:100%;box-sizing:border-box;gap:12px">
       <div style="flex-shrink:0;min-width:120px;display:flex;align-items:center">
-        <img class="topbar-logo logo-light-only"
-             src="../Appscript/Gestor de Apoyos NEO/core style/assets/logo-black.png"
-             alt="Amplifica"
+<img class="topbar-logo logo-light-only"
+     src="./assets/logo-black.png"
              style="height:28px;object-fit:contain"
              onerror="this.style.display='none'">
-        <img class="topbar-logo logo-dark-only"
-             src="../Appscript/Gestor de Apoyos NEO/core style/assets/logo-yellow-white.png"
+<img class="topbar-logo logo-dark-only"
+     src="./assets/logo-yellow-white.png"
              alt="Amplifica"
              style="height:28px;object-fit:contain"
              onerror="this.style.display='none'">
@@ -800,13 +799,22 @@ function onRutFmt(inp){inp.value=formatRut(inp.value);}
 function hasConflict(rut,type,date){
   // Check same shift type in any branch
   if(shifts.some(s=>s.shift===type&&s.date===date&&(s.enrolled||[]).some(e=>e.rut===rut)))return{conflict:true,reason:`Ya tienes turno ${type} ese día en otra sucursal`};
-  // Check overlapping shifts: AM+PM overlap (12:00-17:30), PM+Nocturno overlap (21:30-22:00)
-  const overlaps={AM:['PM'],PM:['AM','Nocturno'],Nocturno:['PM']};
+  // One shift per day: all three types conflict with each other on the same date
+  const overlaps={AM:['PM','Nocturno'],PM:['AM','Nocturno'],Nocturno:['AM','PM']};
   const blocked=overlaps[type]||[];
   for(const other of blocked){
     if(shifts.some(s=>s.shift===other&&s.date===date&&(s.enrolled||[]).some(e=>e.rut===rut))){
       return{conflict:true,reason:`El turno ${type} se solapa con el turno ${other} que ya tienes ese día`};
     }
+  }
+  // After a Nocturno, AM and PM the following day are blocked
+  if(type==='AM'||type==='PM'){
+    const [y,m,d]=date.split('-').map(Number);
+    const prev=new Date(y,m-1,d);
+    prev.setDate(prev.getDate()-1);
+    const prevISO=prev.getFullYear()+'-'+String(prev.getMonth()+1).padStart(2,'0')+'-'+String(prev.getDate()).padStart(2,'0');
+    if(shifts.some(s=>s.shift==='Nocturno'&&s.date===prevISO&&(s.enrolled||[]).some(e=>e.rut===rut)))
+      return{conflict:true,reason:'Tienes un Nocturno el día anterior — solo puedes tomar otro Nocturno'};
   }
   return{conflict:false};
 }
@@ -1532,7 +1540,12 @@ async function createShift(){
 }
 
 async function adminDelShift(id){
-  if(!confirm('¿Eliminar este turno? Esta acción no se puede deshacer.'))return;
+  const _s=shifts.find(s=>s.id===id);
+  const _n=_s?((_s.enrolled||[]).length):0;
+  const _msg=_n>0
+    ?`¿Eliminar este turno? Hay ${_n} persona${_n===1?'':'s'} inscrita${_n===1?'':'s'}. Sus inscripciones se perderán. Esta acción no se puede deshacer.`
+    :'¿Eliminar este turno? No hay personas inscritas. Esta acción no se puede deshacer.';
+  if(!confirm(_msg))return;
   const btn=document.querySelector(`button[onclick="adminDelShift('${id}')"]`);
   if(btn){btn.disabled=true;}
   try{
