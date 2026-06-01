@@ -597,6 +597,34 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
         <div id="blocked-list"></div>
       </div>
 
+      <!-- TalentFinder Import -->
+      <div class="card" style="margin-top:16px;border:1.5px solid #C4B5FD">
+        <div class="section-title" style="color:#4C1D95"><i class="ti ti-users-plus" style="color:#7C3AED"></i>Personal Talent Finder</div>
+        <p style="font-size:12px;color:#64748B;margin-bottom:14px;line-height:1.6">Importa personal externo de Talent Finder desde el Excel. No se descuentan de las vacantes del turno, pero sí aparecen en el Resumen de Cobertura.</p>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <button id="tf-fmt1-btn" onclick="setTFFormat(1)" style="padding:6px 14px;border-radius:99px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid #7C3AED;background:#7C3AED;color:white;font-family:'DM Sans',sans-serif;transition:all 0.15s">Formato 1 (Excel TF)</button>
+          <button id="tf-fmt2-btn" onclick="setTFFormat(2)" style="padding:6px 14px;border-radius:99px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid #C4B5FD;background:white;color:#7C3AED;font-family:'DM Sans',sans-serif;transition:all 0.15s">Formato 2</button>
+        </div>
+        <div id="tf-format-hint" style="font-size:11px;color:#6B7280;margin-bottom:10px;background:#F5F3FF;border:1px solid #DDD6FE;border-radius:8px;padding:8px 12px">
+          <strong>Formato 1:</strong> FECHA · SUCURSAL · OBSERVACION CLIENTE · RUT · NOMBRE · APELLIDO PAT · APELLIDO MAT · CELULAR · CORREO
+        </div>
+        <div class="form-row">
+          <label>Pegar datos del Excel (sin encabezado)</label>
+          <textarea id="tf-paste" rows="6" style="width:100%;padding:10px 13px;border:1.5px solid #C4B5FD;border-radius:11px;font-size:12px;font-family:'DM Mono',monospace;resize:vertical;background:#FDFBFF" placeholder="Copia las filas del Excel y pégalas aquí..."></textarea>
+        </div>
+        <button onclick="parseTFPaste()" style="padding:8px 16px;border-radius:10px;font-size:13px;cursor:pointer;border:1.5px solid #7C3AED;background:white;color:#7C3AED;font-family:'DM Sans',sans-serif;font-weight:600;margin-bottom:14px"><i class="ti ti-search" style="margin-right:5px"></i>Parsear y previsualizar</button>
+        <div id="tf-preview"></div>
+        <div id="tf-upload-row" style="display:none;margin-top:12px">
+          <button onclick="uploadTFPeople()" id="tf-upload-btn" style="padding:10px 20px;border-radius:10px;font-size:13px;cursor:pointer;border:none;background:#7C3AED;color:white;font-family:'DM Sans',sans-serif;font-weight:600"><i class="ti ti-upload" style="margin-right:5px"></i>Subir al sistema (<span id="tf-count">0</span> personas)</button>
+        </div>
+        <div style="margin-top:20px;border-top:1px solid #EDE9FE;padding-top:16px">
+          <div style="font-size:13px;font-weight:700;margin-bottom:10px;color:#4C1D95">TF ya cargados</div>
+          <div id="tf-loaded-list">
+            <button onclick="loadTFPeople()" style="padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer;border:1.5px solid #C4B5FD;background:white;color:#7C3AED;font-family:'DM Sans',sans-serif;font-weight:600"><i class="ti ti-refresh" style="margin-right:4px"></i>Ver personal TF cargado</button>
+          </div>
+        </div>
+      </div>
+
       <div class="export-box">
         <div class="export-box-title"><i class="ti ti-table-export"></i>Exportar datos de inscritos</div>
         <div class="export-box-desc">Descarga toda la información en formato CSV, compatible con Excel y Google Sheets.<br>Incluye: nombre, RUT, sucursal, turno, fecha y hora de inscripción.</div>
@@ -701,6 +729,62 @@ const DATES=(()=>{const a=[];for(let i=0;i<14;i++){const d=new Date(2026,4,25+i)
 let myRut='',myName='',myRole='',myEmail='',shifts=[];
 let timerInterval=null;
 
+// ── TalentFinder import utilities ────────────────────────────────────────────
+const TF_BRANCH_MAP={'LO BARNECHEA':'Lo Barnechea','QUILICURA':'Quilicura','SANTIAGO CENTRO':'Santiago Centro','LA REINA':'La Reina','STGO. CENTRO':'Santiago Centro','STGO CENTRO':'Santiago Centro'};
+function normalizeBranch(raw){
+  const up=String(raw||'').trim().toUpperCase();
+  if(TF_BRANCH_MAP[up])return TF_BRANCH_MAP[up];
+  return up.replace(/\b\w\S*/g,t=>t[0].toUpperCase()+t.slice(1).toLowerCase());
+}
+function normalizeShiftType(raw){
+  const s=String(raw||'').trim().toUpperCase();
+  if(s.startsWith('NOCHE'))return 'Nocturno';
+  if(s.startsWith('AM'))return 'AM';
+  if(s.startsWith('PM'))return 'PM';
+  return null;
+}
+function parseTFDate(raw){
+  const s=String(raw||'').trim();
+  if(!s||s==='null'||s==='undefined')return null;
+  if(/^\d{4}-\d{2}-\d{2}/.test(s))return s.slice(0,10);
+  const m=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if(m)return`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  return null;
+}
+function parseTFFormat1(text){
+  // Cols: FECHA, SUCURSAL, OBSERVACION CLIENTE, RUT, NOMBRE, APELLIDO PAT, APELLIDO MAT, CELULAR, CORREO
+  const rows=text.trim().split('\n').filter(r=>r.trim());
+  return rows.map(row=>{
+    const cols=row.split('\t').map(c=>c.replace(/\xa0/g,' ').trim());
+    return{
+      date:parseTFDate(cols[0]),
+      branch:normalizeBranch(cols[1]),
+      shiftType:normalizeShiftType(cols[2]),
+      rut:formatRut(cols[3]||''),
+      name:[cols[4],cols[5],cols[6]].filter(Boolean).join(' ').trim()
+    };
+  });
+}
+function parseTFFormat2(text){
+  // Cols: Nombre, Rut, Email, Sucursal, día, Turno
+  const rows=text.trim().split('\n').filter(r=>r.trim());
+  return rows.map(row=>{
+    const cols=row.split('\t').map(c=>c.replace(/\xa0/g,' ').trim());
+    return{
+      name:cols[0]||'',
+      rut:formatRut(cols[1]||''),
+      branch:normalizeBranch(cols[3]),
+      date:parseTFDate(cols[4]),
+      shiftType:normalizeShiftType(cols[5])
+    };
+  });
+}
+function matchTFShift(date,branch,shiftType){
+  if(!date||!branch||!shiftType)return null;
+  return shifts.find(s=>fmtDateISO(s.date)===date&&s.branch===branch&&s.shift===shiftType)||null;
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 const API='https://script.google.com/macros/s/AKfycbwsqDQ07KxAI95WY0clsk4nCvDmrttuCXWZVhwdA9O1-grYeRvDMAFWm69frY90U0wr/exec';
 function jsonp(params){
   return new Promise((resolve,reject)=>{
@@ -736,6 +820,7 @@ async function apiCall(body){
     if(body.rut)params.rut=body.rut;
     if(body.reason)params.reason=body.reason;
     if(body.blockedBy)params.blockedBy=body.blockedBy;
+    if(body.persons)params.persons=JSON.stringify(body.persons);
     return await jsonp(params);
   }catch(e){console.error('API error',e);return {error:e.toString()};}
 }
@@ -1518,6 +1603,144 @@ async function unenroll(id){
     renderWorker();
   }
 }
+
+// ── TalentFinder panel logic ─────────────────────────────────────────────────
+let tfFormat=1;
+let tfParsed=[];
+
+function setTFFormat(n){
+  tfFormat=n;
+  const btn1=document.getElementById('tf-fmt1-btn');
+  const btn2=document.getElementById('tf-fmt2-btn');
+  if(btn1&&btn2){
+    if(n===1){
+      btn1.style.background='#7C3AED';btn1.style.color='white';btn1.style.borderColor='#7C3AED';
+      btn2.style.background='white';btn2.style.color='#7C3AED';btn2.style.borderColor='#C4B5FD';
+    } else {
+      btn2.style.background='#7C3AED';btn2.style.color='white';btn2.style.borderColor='#7C3AED';
+      btn1.style.background='white';btn1.style.color='#7C3AED';btn1.style.borderColor='#C4B5FD';
+    }
+  }
+  const hint=document.getElementById('tf-format-hint');
+  if(hint){
+    hint.innerHTML=n===1
+      ?'<strong>Formato 1:</strong> FECHA · SUCURSAL · OBSERVACION CLIENTE · RUT · NOMBRE · APELLIDO PAT · APELLIDO MAT · CELULAR · CORREO'
+      :'<strong>Formato 2:</strong> Nombre · Rut · Email · Sucursal · día · Turno';
+  }
+}
+
+function parseTFPaste(){
+  const text=document.getElementById('tf-paste').value;
+  if(!text.trim()){showToast('Pega los datos del Excel primero','err');return;}
+  const raw=tfFormat===1?parseTFFormat1(text):parseTFFormat2(text);
+  tfParsed=[];
+  for(const entry of raw){
+    if(!entry.rut||!validateRut(entry.rut))continue;
+    const shift=entry.date&&entry.branch&&entry.shiftType
+      ?matchTFShift(entry.date,entry.branch,entry.shiftType):null;
+    tfParsed.push({
+      rut:entry.rut,
+      name:entry.name,
+      idTurno:shift?shift.id:null,
+      shiftLabel:shift
+        ?`${entry.branch} · ${entry.shiftType} · ${entry.date}`
+        :`⚠ sin coincidencia (${entry.branch||'?'} ${entry.shiftType||'?'} ${entry.date||'?'})`,
+      matched:!!shift
+    });
+  }
+  if(!tfParsed.length){showToast('No se encontraron filas válidas. Verifica el formato y que el RUT sea válido.','err');return;}
+  renderTFPreview();
+}
+
+function renderTFPreview(){
+  const el=document.getElementById('tf-preview');
+  const matched=tfParsed.filter(p=>p.matched);
+  document.getElementById('tf-count').textContent=matched.length;
+  document.getElementById('tf-upload-row').style.display=matched.length?'':'none';
+  if(!el)return;
+  let html=`<div style="font-size:12px;font-weight:700;margin-bottom:8px;color:#4C1D95">${tfParsed.length} fila(s) parseadas · ${matched.length} con turno coincidente · ${tfParsed.length-matched.length} sin coincidencia</div>`;
+  html+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">';
+  html+='<thead><tr style="background:#F5F3FF">';
+  ['Nombre','RUT','Turno / Estado'].forEach(h=>{
+    html+=`<th style="padding:6px 10px;text-align:left;border-bottom:1.5px solid #DDD6FE;font-weight:700;color:#4C1D95;white-space:nowrap">${h}</th>`;
+  });
+  html+='</tr></thead><tbody>';
+  tfParsed.forEach((p,i)=>{
+    const bg=i%2===0?'#FDFBFF':'#F5F3FF';
+    const statusColor=p.matched?'#166534':'#92400E';
+    const statusBg=p.matched?'#DCFCE7':'#FEF3C7';
+    const statusBorder=p.matched?'#86EFAC':'#FDE68A';
+    html+=`<tr style="background:${bg}">
+      <td style="padding:6px 10px;border-bottom:1px solid #EDE9FE">${p.name||'—'}</td>
+      <td style="padding:6px 10px;border-bottom:1px solid #EDE9FE;font-family:'DM Mono',monospace">${p.rut}</td>
+      <td style="padding:6px 10px;border-bottom:1px solid #EDE9FE">
+        <span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;background:${statusBg};color:${statusColor};border:1px solid ${statusBorder}">${p.shiftLabel}</span>
+      </td>
+    </tr>`;
+  });
+  html+='</tbody></table></div>';
+  el.innerHTML=html;
+}
+
+async function uploadTFPeople(){
+  const persons=tfParsed.filter(p=>p.matched).map(p=>({rut:p.rut,name:p.name,idTurno:p.idTurno}));
+  if(!persons.length){showToast('No hay personas con turno coincidente para subir','err');return;}
+  const btn=document.getElementById('tf-upload-btn');
+  btn.disabled=true;btn.innerHTML='<i class="ti ti-loader" style="margin-right:5px"></i>Subiendo...';
+  try{
+    const res=await apiCall({action:'saveTFPeople',persons});
+    if(res&&res.ok){
+      const msg=`${res.added} persona(s) agregada(s)${res.duplicates?`, ${res.duplicates} ya existían`:''}`;
+      showToast(msg,'ok');
+      document.getElementById('tf-paste').value='';
+      document.getElementById('tf-preview').innerHTML='';
+      document.getElementById('tf-upload-row').style.display='none';
+      tfParsed=[];
+      loadTFPeople();
+    } else {
+      showToast(res&&res.error?res.error:'Error al subir','err');
+    }
+  }catch(e){showToast('Error de conexión','err');}
+  finally{btn.disabled=false;btn.innerHTML='<i class="ti ti-upload" style="margin-right:5px"></i>Subir al sistema (<span id="tf-count">'+document.getElementById('tf-count').textContent+'</span> personas)';}
+}
+
+async function loadTFPeople(){
+  const el=document.getElementById('tf-loaded-list');
+  if(!el)return;
+  el.innerHTML='<span style="font-size:12px;color:#94A3B8">Cargando...</span>';
+  try{
+    const res=await apiCall({action:'getTFPeople'});
+    if(!res||res.error){el.innerHTML='<span style="font-size:12px;color:#EF4444">Error al cargar</span>';return;}
+    const tf=res.tf||[];
+    if(!tf.length){el.innerHTML='<span style="font-size:12px;color:#94A3B8">No hay personal TF cargado aún.</span>';return;}
+    // Group by idTurno and enrich with shift data
+    const byShift={};
+    tf.forEach(p=>{
+      if(!byShift[p.idTurno])byShift[p.idTurno]=[];
+      byShift[p.idTurno].push(p);
+    });
+    let html='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">';
+    html+='<thead><tr style="background:#F5F3FF"><th style="padding:6px 10px;text-align:left;border-bottom:1.5px solid #DDD6FE;font-weight:700;color:#4C1D95">Nombre</th><th style="padding:6px 10px;text-align:left;border-bottom:1.5px solid #DDD6FE;font-weight:700;color:#4C1D95">RUT</th><th style="padding:6px 10px;text-align:left;border-bottom:1.5px solid #DDD6FE;font-weight:700;color:#4C1D95">Turno</th><th style="padding:6px 10px;text-align:left;border-bottom:1.5px solid #DDD6FE;font-weight:700;color:#4C1D95">Fecha carga</th></tr></thead><tbody>';
+    let row=0;
+    Object.keys(byShift).forEach(idTurno=>{
+      const s=shifts.find(x=>x.id===idTurno);
+      const shiftLabel=s?`${s.branch} · ${s.shift} · ${fmtDateShort(s.date)}`:idTurno;
+      byShift[idTurno].forEach(p=>{
+        const bg=row%2===0?'#FDFBFF':'#F5F3FF';
+        html+=`<tr style="background:${bg}">
+          <td style="padding:6px 10px;border-bottom:1px solid #EDE9FE">${p.name||'—'}</td>
+          <td style="padding:6px 10px;border-bottom:1px solid #EDE9FE;font-family:'DM Mono',monospace">${p.rut}</td>
+          <td style="padding:6px 10px;border-bottom:1px solid #EDE9FE"><span style="display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;background:#EDE9FE;color:#4C1D95;border:1px solid #C4B5FD">${shiftLabel}</span></td>
+          <td style="padding:6px 10px;border-bottom:1px solid #EDE9FE;color:#94A3B8">${p.enrolledAt||'—'}</td>
+        </tr>`;
+        row++;
+      });
+    });
+    html+=`</tbody></table></div><div style="font-size:11px;color:#94A3B8;margin-top:6px">${tf.length} persona(s) TF en total</div>`;
+    el.innerHTML=html;
+  }catch(e){el.innerHTML='<span style="font-size:12px;color:#EF4444">Error de conexión</span>';}
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 async function loadAndRenderAdmin(){
   document.getElementById('loading-admin').style.display='block';
