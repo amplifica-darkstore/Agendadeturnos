@@ -1882,8 +1882,8 @@ async function createStandardShifts(){
   for(const t of toCreate){
     try{
       const id='std-'+t.branch.replace(/\s/g,'')+'-'+t.date+'-'+Date.now();
-      const shift={id,branch:t.branch,shift:'Estándar',date:t.date,limit,enrolled:[],horario:STANDARD_HORARIO[t.branch]||'',monthKey:currentMonthKey};
-      const res=await apiCall({action:'saveShift',shift:encodeURIComponent(JSON.stringify(shift)),monthKey:currentMonthKey});
+      const shift={id,branch:t.branch,shift:'Estándar',date:t.date,limit,enrolled:[],horario:STANDARD_HORARIO[t.branch]||''};
+      const res=await apiCall({action:'saveShift',shift:shift,monthKey:currentMonthKey});
       if(res&&res.ok)created++;else errors++;
     }catch(e){errors++;}
   }
