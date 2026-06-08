@@ -262,8 +262,8 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
   <div id="page-period" class="page active" style="padding:24px;min-height:calc(100vh - 120px)">
     <div style="max-width:640px;margin:0 auto">
       <div style="text-align:center;margin-bottom:28px">
-        <div style="font-size:22px;font-weight:800;color:#1a1a6e;margin-bottom:6px">Selecciona un período</div>
-        <div style="font-size:13px;color:#64748B">Elige el mes o evento para ver y gestionar los turnos</div>
+        <div style="font-size:22px;font-weight:800;color:#1a1a6e;margin-bottom:6px">Selecciona un mes</div>
+        <div style="font-size:13px;color:#64748B">Elige el mes para ver los turnos disponibles e inscribirte</div>
       </div>
       <div id="period-cards"></div>
     </div>
@@ -365,7 +365,8 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
       </div>
     </a>
 
-    <div style="background:white;border-radius:16px;border:1.5px solid #E2E8F0;padding:20px 22px;margin-bottom:22px">
+    <div id="faq-placeholder"></div>
+    <div style="background:white;border-radius:16px;border:1.5px solid #E2E8F0;padding:20px 22px;margin-bottom:22px" id="faq-block">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
         <div style="background:#EFF6FF;border-radius:10px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
           <i class="ti ti-help" style="font-size:20px;color:#185FA5"></i>
@@ -425,7 +426,25 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
             ¿Cuándo es el pago?
           </summary>
           <div style="margin-top:10px;padding-left:24px;font-size:15px;color:#475569;line-height:1.8">
-            El pago se realiza en la <strong style="color:#1E293B">quincena de junio</strong>. Se paga el total de todos los turnos realizados, mediante <strong style="color:#1E293B">boleta de honorarios.</strong>
+            El pago se realiza a <strong style="color:#1E293B">fin de cada mes</strong>. Se paga el total de todos los turnos realizados en ese mes, mediante <strong style="color:#1E293B">boleta de honorarios.</strong>
+          </div>
+        </details>
+
+        <details style="border-top:1px solid #F1F5F9;padding-top:14px;margin-top:0">
+          <summary style="font-size:16px;font-weight:700;color:#1E293B;cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px">
+            <i class="ti ti-player-play" style="font-size:16px;color:#185FA5;flex-shrink:0"></i>
+            ¿Cuáles serán mis funciones?
+          </summary>
+          <div style="margin-top:10px;padding-left:24px;font-size:15px;color:#475569;line-height:1.8">
+            Revisa este video donde te explicamos qué tendrás que hacer en el turno:
+            <div style="margin-top:10px">
+              <a href="https://drive.google.com/file/d/1ijckL0VuNjL5nUDPgYZNbP8ASP57FhmD/view" target="_blank"
+                style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#1a1a6e,#185FA5);color:white;padding:10px 18px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none">
+                <i class="ti ti-player-play-filled" style="font-size:16px"></i>
+                Ver video de onboarding
+                <i class="ti ti-external-link" style="font-size:13px;opacity:0.8"></i>
+              </a>
+            </div>
           </div>
         </details>
 
@@ -443,7 +462,7 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
     <div style="background:white;border-radius:14px;border:1px solid #E2E8F0;padding:12px 16px;margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <i class="ti ti-filter" style="color:#185FA5;font-size:16px"></i>
       <select id="f-branch" onchange="renderWorker()" style="padding:9px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:14px;background:white;color:#1E293B;font-family:'DM Sans',sans-serif;font-weight:500"><option value="">Todas las sucursales</option><option>Quilicura</option><option>Santiago Centro</option><option>Lo Barnechea</option><option>La Reina</option></select>
-      <select id="f-shift" onchange="renderWorker()" style="padding:9px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:14px;background:white;color:#1E293B;font-family:'DM Sans',sans-serif;font-weight:500"><option value="">Todos los turnos</option><option>AM</option><option>PM</option><option>Nocturno</option><option>Estándar</option></select>
+      <select id="f-shift" onchange="renderWorker()" style="padding:9px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:14px;background:white;color:#1E293B;font-family:'DM Sans',sans-serif;font-weight:500"><option value="">Todos los turnos</option><option>Estándar</option></select>
       <select id="f-week" onchange="renderWorker()" style="padding:9px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:14px;background:white;color:#1E293B;font-family:'DM Sans',sans-serif;font-weight:500"><option value="">Todas las semanas</option><option value="1">Semana 1 — 25 al 31 mayo</option><option value="2">Semana 2 — 1 al 7 junio</option><option value="3">Semana 3 — 8 al 12 junio</option></select>
       <label onclick="renderWorker()" style="display:inline-flex;align-items:center;gap:6px;padding:9px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:14px;font-family:'DM Sans',sans-serif;font-weight:500;color:#1E293B;background:white;cursor:pointer;user-select:none" id="lbl-only-available">
         <input type="checkbox" id="f-only-available" onchange="renderWorker()" style="accent-color:#1a1a6e;width:15px;height:15px;cursor:pointer">
@@ -463,6 +482,7 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
     </div>
     <div id="loading-worker" class="loading"><i class="ti ti-refresh"></i>Cargando turnos...</div>
     <div id="worker-content"></div>
+    <div id="faq-bottom"></div>
   </div>
 
   <div id="page-overview" class="page">
@@ -706,11 +726,11 @@ const SHIFT_HOURS={AM:'07:30 – 17:30',PM:'12:00 – 22:00',Nocturno:'21:30 –
 
 // ── Períodos mensuales ────────────────────────────────────────
 const MONTH_DEFS = [
-  { key:'cyber-jun-2026', label:'Cyber Junio 2026',  isCyber:true,  month:6, year:2026, dateFrom:'2026-05-25', dateTo:'2026-06-12' },
-  { key:'jun-2026',       label:'Junio 2026',         isCyber:false, month:6, year:2026, dateFrom:'2026-06-01', dateTo:'2026-06-30' },
-  { key:'jul-2026',       label:'Julio 2026',          isCyber:false, month:7, year:2026, dateFrom:'2026-07-01', dateTo:'2026-07-31' },
-  { key:'ago-2026',       label:'Agosto 2026',         isCyber:false, month:8, year:2026, dateFrom:'2026-08-01', dateTo:'2026-08-31' },
-  { key:'sep-2026',       label:'Septiembre 2026',     isCyber:false, month:9, year:2026, dateFrom:'2026-09-01', dateTo:'2026-09-30' },
+  { key:'cyber-jun-2026', label:'Cyber Junio 2026',  evento:1, isCyber:true,  month:6, year:2026, dateFrom:'2026-05-25', dateTo:'2026-06-12' },
+  { key:'jun-2026',       label:'Junio 2026',         evento:2, isCyber:false, month:6, year:2026, dateFrom:'2026-06-08', dateTo:'2026-06-30' },
+  { key:'jul-2026',       label:'Julio 2026',          evento:3, isCyber:false, month:7, year:2026, dateFrom:'2026-07-01', dateTo:'2026-07-31' },
+  { key:'ago-2026',       label:'Agosto 2026',         evento:4, isCyber:false, month:8, year:2026, dateFrom:'2026-08-01', dateTo:'2026-08-31' },
+  { key:'sep-2026',       label:'Septiembre 2026',     evento:5, isCyber:false, month:9, year:2026, dateFrom:'2026-09-01', dateTo:'2026-09-30' },
 ];
 let currentMonthKey = 'cyber-jun-2026';
 let currentMonthDef = MONTH_DEFS[0];
@@ -795,6 +815,7 @@ async function apiCall(body){
     if(body.reason)params.reason=body.reason;
     if(body.blockedBy)params.blockedBy=body.blockedBy;
     if(body.blockType)params.blockType=body.blockType;
+    if(body.monthKey)params.monthKey=body.monthKey;
     return await jsonp(params);
   }catch(e){console.error('API error',e);return {error:e.toString()};}
 }
@@ -1289,6 +1310,64 @@ function toggleHorarioBar() {
   const open = bar.style.display === 'none' || bar.style.display === '';
   bar.style.display = open ? 'block' : 'none';
   if (ico) ico.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
+}
+
+function updateHorarioTopbar() {
+  const def = currentMonthDef || MONTH_DEFS[0];
+  const btn = document.getElementById('btn-horario-toggle');
+  const bar = document.getElementById('horario-bar');
+  if (!btn) return;
+  if (def && def.isCyber) {
+    // Cyber: mostrar botón AM/PM/Noc
+    btn.style.display = '';
+    bar.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:8px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);min-width:90px;text-transform:uppercase;letter-spacing:0.05em">Quilicura</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(5,150,105,0.25);color:#6EE7B7;border:1px solid rgba(5,150,105,0.4)"><i class="ti ti-sun" style="font-size:11px"></i>AM 07:30–17:30</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(217,119,6,0.25);color:#FCD34D;border:1px solid rgba(217,119,6,0.4)"><i class="ti ti-sun-high" style="font-size:11px"></i>PM 12:00–22:00</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(124,58,237,0.25);color:#C4B5FD;border:1px solid rgba(124,58,237,0.4)"><i class="ti ti-moon" style="font-size:11px"></i>Noc 21:30–07:30</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);min-width:90px;text-transform:uppercase;letter-spacing:0.05em">Stgo. Centro</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(5,150,105,0.25);color:#6EE7B7;border:1px solid rgba(5,150,105,0.4)"><i class="ti ti-sun" style="font-size:11px"></i>AM 07:30–17:30</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(217,119,6,0.25);color:#FCD34D;border:1px solid rgba(217,119,6,0.4)"><i class="ti ti-sun-high" style="font-size:11px"></i>PM 12:00–22:00</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(124,58,237,0.25);color:#C4B5FD;border:1px solid rgba(124,58,237,0.4)"><i class="ti ti-moon" style="font-size:11px"></i>Noc 21:30–07:30</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);min-width:90px;text-transform:uppercase;letter-spacing:0.05em">La Reina</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(5,150,105,0.25);color:#6EE7B7;border:1px solid rgba(5,150,105,0.4)"><i class="ti ti-sun" style="font-size:11px"></i>AM 07:30–17:30</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(217,119,6,0.25);color:#FCD34D;border:1px solid rgba(217,119,6,0.4)"><i class="ti ti-sun-high" style="font-size:11px"></i>PM 12:00–22:00</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(124,58,237,0.25);color:#C4B5FD;border:1px solid rgba(124,58,237,0.4)"><i class="ti ti-moon" style="font-size:11px"></i>Noc 21:30–07:30</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);min-width:90px;text-transform:uppercase;letter-spacing:0.05em">Lo Barnechea</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(5,150,105,0.25);color:#6EE7B7;border:1px solid rgba(5,150,105,0.4)"><i class="ti ti-sun" style="font-size:11px"></i>AM 07:30–17:30</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(217,119,6,0.25);color:#FCD34D;border:1px solid rgba(217,119,6,0.4)"><i class="ti ti-sun-high" style="font-size:11px"></i>PM 11:00–21:00</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(124,58,237,0.25);color:#C4B5FD;border:1px solid rgba(124,58,237,0.4)"><i class="ti ti-moon" style="font-size:11px"></i>Noc 21:30–07:30</span>
+      </div>
+    </div>`;
+  } else {
+    // Mes normal: mostrar horarios estándar por sucursal
+    btn.style.display = '';
+    bar.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);min-width:100px;text-transform:uppercase;letter-spacing:0.05em">Quilicura</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(5,150,105,0.25);color:#6EE7B7;border:1px solid rgba(5,150,105,0.4)"><i class="ti ti-clock" style="font-size:11px"></i>08:00 – 18:00</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);min-width:100px;text-transform:uppercase;letter-spacing:0.05em">Stgo. Centro</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(5,150,105,0.25);color:#6EE7B7;border:1px solid rgba(5,150,105,0.4)"><i class="ti ti-clock" style="font-size:11px"></i>09:00 – 19:00</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);min-width:100px;text-transform:uppercase;letter-spacing:0.05em">La Reina</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(5,150,105,0.25);color:#6EE7B7;border:1px solid rgba(5,150,105,0.4)"><i class="ti ti-clock" style="font-size:11px"></i>08:00 – 18:00</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);min-width:100px;text-transform:uppercase;letter-spacing:0.05em">Lo Barnechea</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(5,150,105,0.25);color:#6EE7B7;border:1px solid rgba(5,150,105,0.4)"><i class="ti ti-clock" style="font-size:11px"></i>08:30 – 18:30</span>
+      </div>
+    </div>`;
+  }
 }
 
 function goTab(tab,e){
@@ -1933,20 +2012,66 @@ async function adminEnroll(){
 function renderPeriodSelector(){
   const cont=document.getElementById('period-cards');
   if(!cont)return;
-  const today=new Date();
+  const todayISO=(function(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
+  const MNAMES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const MNAMES_FULL=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  function fmtRange(from,to){
+    const a=from.split('-'),b=to.split('-');
+    const af=Number(a[2])+' '+MNAMES[Number(a[1])-1],bt=Number(b[2])+' '+MNAMES[Number(b[1])-1]+' '+b[0];
+    return af+' — '+bt;
+  }
   cont.innerHTML=MONTH_DEFS.map(function(m){
-    const isPast=(m.year<today.getFullYear())||(m.year===today.getFullYear()&&m.month<today.getMonth()+1);
-    const badge=isPast
-      ?'<span style="margin-left:auto;background:#94A3B8;color:white;border-radius:99px;padding:2px 9px;font-size:11px;font-weight:700">Finalizado</span>'
-      :'<span style="margin-left:auto;background:#1D9E75;color:white;border-radius:99px;padding:2px 9px;font-size:11px;font-weight:700">Activo</span>';
-    return`<div class="period-card" onclick="selectPeriod('${m.key}')">
-      <div class="period-card-icon">${m.isCyber?'💻':'📅'}</div>
-      <div style="flex:1">
-        <div style="font-size:15px;font-weight:700;color:#1E293B">${m.label}</div>
-        <div style="font-size:11px;color:#64748B;margin-top:2px">${m.isCyber?'Cyber Dark Store':'Turnos mensuales · 09:00 a 19:00'}</div>
-      </div>
-      ${badge}
-    </div>`;
+    const isActive=todayISO>=m.dateFrom&&todayISO<=m.dateTo;
+    const isFuture=todayISO<m.dateFrom;
+    let badge,cardStyle='';
+    if(isActive){
+      badge='<span style="background:#1D9E75;color:white;border-radius:99px;padding:3px 11px;font-size:11px;font-weight:700;white-space:nowrap">● Activo</span>';
+      cardStyle='border-color:#1D9E75;box-shadow:0 4px 16px rgba(29,158,117,0.18)';
+    }else if(isFuture){
+      badge='<span style="background:#185FA5;color:white;border-radius:99px;padding:3px 11px;font-size:11px;font-weight:700;white-space:nowrap">Próximo</span>';
+    }else{
+      badge='<span style="background:#94A3B8;color:white;border-radius:99px;padding:3px 11px;font-size:11px;font-weight:700;white-space:nowrap">Finalizado</span>';
+    }
+    // Ícono y etiqueta del card
+    if(m.isCyber){
+      // Evento especial Cyber
+      const iconBg=isActive?'linear-gradient(135deg,#1a1a6e,#2d2db5)':'#EEF2FF';
+      const iconColor=isActive?'white':'#4338CA';
+      const icon=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:54px;height:54px;background:${iconBg};border-radius:14px;flex-shrink:0">
+        <span style="font-size:20px;line-height:1">💻</span>
+        <span style="font-size:9px;font-weight:800;color:${iconColor};text-transform:uppercase;letter-spacing:0.04em;line-height:1.4">Evento</span>
+      </div>`;
+      const desc='Evento especial Cyber Dark Store';
+      return`<div class="period-card" style="${cardStyle}" onclick="selectPeriod('${m.key}')">
+        ${icon}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:15px;font-weight:800;color:#1E293B;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${m.label} ${badge}</div>
+          <div style="font-size:11px;color:#64748B;margin-top:3px">${desc}</div>
+          <div style="font-size:11px;color:#94A3B8;margin-top:2px;font-family:'DM Mono',monospace">${fmtRange(m.dateFrom,m.dateTo)}</div>
+        </div>
+        <i class="ti ti-chevron-right" style="font-size:18px;color:#CBD5E1;flex-shrink:0"></i>
+      </div>`;
+    }else{
+      // Mes normal
+      const monthName=MNAMES_FULL[m.month-1];
+      const monthShort=MNAMES[m.month-1].toUpperCase();
+      const iconBg=isActive?'linear-gradient(135deg,#185FA5,#1D9E75)':'#F0F4FF';
+      const numColor=isActive?'white':'#1a1a6e';
+      const lblColor=isActive?'rgba(255,255,255,0.8)':'#94A3B8';
+      const icon=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:54px;height:54px;background:${iconBg};border-radius:14px;flex-shrink:0">
+        <span style="font-size:13px;font-weight:900;color:${numColor};line-height:1">${monthShort}</span>
+        <span style="font-size:16px;font-weight:900;color:${numColor};line-height:1.1">${m.year}</span>
+      </div>`;
+      return`<div class="period-card" style="${cardStyle}" onclick="selectPeriod('${m.key}')">
+        ${icon}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:15px;font-weight:800;color:#1E293B;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${monthName} ${m.year} ${badge}</div>
+          <div style="font-size:11px;color:#64748B;margin-top:3px">Turnos mensuales · inscríbete en los días disponibles</div>
+          <div style="font-size:11px;color:#94A3B8;margin-top:2px;font-family:'DM Mono',monospace">${fmtRange(m.dateFrom,m.dateTo)}</div>
+        </div>
+        <i class="ti ti-chevron-right" style="font-size:18px;color:#CBD5E1;flex-shrink:0"></i>
+      </div>`;
+    }
   }).join('');
 }
 
@@ -2035,6 +2160,15 @@ function populateWeekFilters(){
       const o=document.createElement('option');o.value=String(wk);o.textContent=getWeekLabel(wk);sel.appendChild(o);
     }
   });
+  // Actualizar opciones de turno según tipo de período
+  const isCyber=def&&def.isCyber;
+  const cyberOpts='<option value="">Todos los turnos</option><option>AM</option><option>PM</option><option>Nocturno</option><option>Estándar</option>';
+  const stdOpts='<option value="">Todos los turnos</option><option>Estándar</option>';
+  ['f-shift','adm-filter-shift'].forEach(function(id){
+    const sel=document.getElementById(id);if(!sel)return;
+    sel.innerHTML=isCyber?cyberOpts:stdOpts;
+  });
+  updateHorarioTopbar();
 }
 function checkDuplicate(){
   const branch=document.getElementById('a-branch').value,shift=document.getElementById('a-shift').value,date=document.getElementById('a-date').value;
@@ -2320,6 +2454,12 @@ document.getElementById('a-inp-pass').addEventListener('keydown',e=>{if(e.key===
   populateWeekFilters();
   populateStdFrom();
   renderPeriodSelector();
+  // Mover bloque FAQ al final de la página del trabajador
+  (function(){
+    const faq=document.getElementById('faq-block');
+    const target=document.getElementById('faq-bottom');
+    if(faq&&target){target.appendChild(faq);faq.style.marginTop='22px';}
+  })();
   try{
     const role=localStorage.getItem('cj26_role');
     if(role==='worker'){
