@@ -462,7 +462,7 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
     <div style="background:white;border-radius:14px;border:1px solid #E2E8F0;padding:12px 16px;margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
       <i class="ti ti-filter" style="color:#185FA5;font-size:16px"></i>
       <select id="f-branch" onchange="renderWorker()" style="padding:9px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:14px;background:white;color:#1E293B;font-family:'DM Sans',sans-serif;font-weight:500"><option value="">Todas las sucursales</option><option>Quilicura</option><option>Santiago Centro</option><option>Lo Barnechea</option><option>La Reina</option></select>
-      <select id="f-shift" onchange="renderWorker()" style="padding:9px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:14px;background:white;color:#1E293B;font-family:'DM Sans',sans-serif;font-weight:500"><option value="">Todos los turnos</option><option>AM</option><option>PM</option><option>Nocturno</option><option>Estándar</option></select>
+      <select id="f-shift" onchange="renderWorker()" style="padding:9px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:14px;background:white;color:#1E293B;font-family:'DM Sans',sans-serif;font-weight:500"><option value="">Todos los turnos</option><option>Estándar</option></select>
       <select id="f-week" onchange="renderWorker()" style="padding:9px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:14px;background:white;color:#1E293B;font-family:'DM Sans',sans-serif;font-weight:500"><option value="">Todas las semanas</option><option value="1">Semana 1 — 25 al 31 mayo</option><option value="2">Semana 2 — 1 al 7 junio</option><option value="3">Semana 3 — 8 al 12 junio</option></select>
       <label onclick="renderWorker()" style="display:inline-flex;align-items:center;gap:6px;padding:9px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:14px;font-family:'DM Sans',sans-serif;font-weight:500;color:#1E293B;background:white;cursor:pointer;user-select:none" id="lbl-only-available">
         <input type="checkbox" id="f-only-available" onchange="renderWorker()" style="accent-color:#1a1a6e;width:15px;height:15px;cursor:pointer">
@@ -1312,6 +1312,64 @@ function toggleHorarioBar() {
   if (ico) ico.style.transform = open ? 'rotate(180deg)' : 'rotate(0deg)';
 }
 
+function updateHorarioTopbar() {
+  const def = currentMonthDef || MONTH_DEFS[0];
+  const btn = document.getElementById('btn-horario-toggle');
+  const bar = document.getElementById('horario-bar');
+  if (!btn) return;
+  if (def && def.isCyber) {
+    // Cyber: mostrar botón AM/PM/Noc
+    btn.style.display = '';
+    bar.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:8px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);min-width:90px;text-transform:uppercase;letter-spacing:0.05em">Quilicura</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(5,150,105,0.25);color:#6EE7B7;border:1px solid rgba(5,150,105,0.4)"><i class="ti ti-sun" style="font-size:11px"></i>AM 07:30–17:30</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(217,119,6,0.25);color:#FCD34D;border:1px solid rgba(217,119,6,0.4)"><i class="ti ti-sun-high" style="font-size:11px"></i>PM 12:00–22:00</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(124,58,237,0.25);color:#C4B5FD;border:1px solid rgba(124,58,237,0.4)"><i class="ti ti-moon" style="font-size:11px"></i>Noc 21:30–07:30</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);min-width:90px;text-transform:uppercase;letter-spacing:0.05em">Stgo. Centro</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(5,150,105,0.25);color:#6EE7B7;border:1px solid rgba(5,150,105,0.4)"><i class="ti ti-sun" style="font-size:11px"></i>AM 07:30–17:30</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(217,119,6,0.25);color:#FCD34D;border:1px solid rgba(217,119,6,0.4)"><i class="ti ti-sun-high" style="font-size:11px"></i>PM 12:00–22:00</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(124,58,237,0.25);color:#C4B5FD;border:1px solid rgba(124,58,237,0.4)"><i class="ti ti-moon" style="font-size:11px"></i>Noc 21:30–07:30</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);min-width:90px;text-transform:uppercase;letter-spacing:0.05em">La Reina</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(5,150,105,0.25);color:#6EE7B7;border:1px solid rgba(5,150,105,0.4)"><i class="ti ti-sun" style="font-size:11px"></i>AM 07:30–17:30</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(217,119,6,0.25);color:#FCD34D;border:1px solid rgba(217,119,6,0.4)"><i class="ti ti-sun-high" style="font-size:11px"></i>PM 12:00–22:00</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(124,58,237,0.25);color:#C4B5FD;border:1px solid rgba(124,58,237,0.4)"><i class="ti ti-moon" style="font-size:11px"></i>Noc 21:30–07:30</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);min-width:90px;text-transform:uppercase;letter-spacing:0.05em">Lo Barnechea</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(5,150,105,0.25);color:#6EE7B7;border:1px solid rgba(5,150,105,0.4)"><i class="ti ti-sun" style="font-size:11px"></i>AM 07:30–17:30</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(217,119,6,0.25);color:#FCD34D;border:1px solid rgba(217,119,6,0.4)"><i class="ti ti-sun-high" style="font-size:11px"></i>PM 11:00–21:00</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(124,58,237,0.25);color:#C4B5FD;border:1px solid rgba(124,58,237,0.4)"><i class="ti ti-moon" style="font-size:11px"></i>Noc 21:30–07:30</span>
+      </div>
+    </div>`;
+  } else {
+    // Mes normal: mostrar horarios estándar por sucursal
+    btn.style.display = '';
+    bar.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);min-width:100px;text-transform:uppercase;letter-spacing:0.05em">Quilicura</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(5,150,105,0.25);color:#6EE7B7;border:1px solid rgba(5,150,105,0.4)"><i class="ti ti-clock" style="font-size:11px"></i>08:00 – 18:00</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);min-width:100px;text-transform:uppercase;letter-spacing:0.05em">Stgo. Centro</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(5,150,105,0.25);color:#6EE7B7;border:1px solid rgba(5,150,105,0.4)"><i class="ti ti-clock" style="font-size:11px"></i>09:00 – 19:00</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);min-width:100px;text-transform:uppercase;letter-spacing:0.05em">La Reina</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(5,150,105,0.25);color:#6EE7B7;border:1px solid rgba(5,150,105,0.4)"><i class="ti ti-clock" style="font-size:11px"></i>08:00 – 18:00</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.6);min-width:100px;text-transform:uppercase;letter-spacing:0.05em">Lo Barnechea</span>
+        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(5,150,105,0.25);color:#6EE7B7;border:1px solid rgba(5,150,105,0.4)"><i class="ti ti-clock" style="font-size:11px"></i>08:30 – 18:30</span>
+      </div>
+    </div>`;
+  }
+}
+
 function goTab(tab,e){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   e.target.closest('.tab').classList.add('active');
@@ -2102,6 +2160,15 @@ function populateWeekFilters(){
       const o=document.createElement('option');o.value=String(wk);o.textContent=getWeekLabel(wk);sel.appendChild(o);
     }
   });
+  // Actualizar opciones de turno según tipo de período
+  const isCyber=def&&def.isCyber;
+  const cyberOpts='<option value="">Todos los turnos</option><option>AM</option><option>PM</option><option>Nocturno</option><option>Estándar</option>';
+  const stdOpts='<option value="">Todos los turnos</option><option>Estándar</option>';
+  ['f-shift','adm-filter-shift'].forEach(function(id){
+    const sel=document.getElementById(id);if(!sel)return;
+    sel.innerHTML=isCyber?cyberOpts:stdOpts;
+  });
+  updateHorarioTopbar();
 }
 function checkDuplicate(){
   const branch=document.getElementById('a-branch').value,shift=document.getElementById('a-shift').value,date=document.getElementById('a-date').value;
