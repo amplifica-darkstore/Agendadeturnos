@@ -365,7 +365,8 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
       </div>
     </a>
 
-    <div style="background:white;border-radius:16px;border:1.5px solid #E2E8F0;padding:20px 22px;margin-bottom:22px">
+    <div id="faq-placeholder"></div>
+    <div style="background:white;border-radius:16px;border:1.5px solid #E2E8F0;padding:20px 22px;margin-bottom:22px" id="faq-block">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
         <div style="background:#EFF6FF;border-radius:10px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
           <i class="ti ti-help" style="font-size:20px;color:#185FA5"></i>
@@ -425,7 +426,25 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
             ¿Cuándo es el pago?
           </summary>
           <div style="margin-top:10px;padding-left:24px;font-size:15px;color:#475569;line-height:1.8">
-            El pago se realiza en la <strong style="color:#1E293B">quincena de junio</strong>. Se paga el total de todos los turnos realizados, mediante <strong style="color:#1E293B">boleta de honorarios.</strong>
+            El pago se realiza a <strong style="color:#1E293B">fin de cada mes</strong>. Se paga el total de todos los turnos realizados en ese mes, mediante <strong style="color:#1E293B">boleta de honorarios.</strong>
+          </div>
+        </details>
+
+        <details style="border-top:1px solid #F1F5F9;padding-top:14px;margin-top:0">
+          <summary style="font-size:16px;font-weight:700;color:#1E293B;cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px">
+            <i class="ti ti-player-play" style="font-size:16px;color:#185FA5;flex-shrink:0"></i>
+            ¿Cuáles serán mis funciones?
+          </summary>
+          <div style="margin-top:10px;padding-left:24px;font-size:15px;color:#475569;line-height:1.8">
+            Revisa este video donde te explicamos qué tendrás que hacer en el turno:
+            <div style="margin-top:10px">
+              <a href="https://drive.google.com/file/d/1ijckL0VuNjL5nUDPgYZNbP8ASP57FhmD/view" target="_blank"
+                style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#1a1a6e,#185FA5);color:white;padding:10px 18px;border-radius:10px;font-size:14px;font-weight:700;text-decoration:none">
+                <i class="ti ti-player-play-filled" style="font-size:16px"></i>
+                Ver video de onboarding
+                <i class="ti ti-external-link" style="font-size:13px;opacity:0.8"></i>
+              </a>
+            </div>
           </div>
         </details>
 
@@ -463,6 +482,7 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
     </div>
     <div id="loading-worker" class="loading"><i class="ti ti-refresh"></i>Cargando turnos...</div>
     <div id="worker-content"></div>
+    <div id="faq-bottom"></div>
   </div>
 
   <div id="page-overview" class="page">
@@ -2367,6 +2387,12 @@ document.getElementById('a-inp-pass').addEventListener('keydown',e=>{if(e.key===
   populateWeekFilters();
   populateStdFrom();
   renderPeriodSelector();
+  // Mover bloque FAQ al final de la página del trabajador
+  (function(){
+    const faq=document.getElementById('faq-block');
+    const target=document.getElementById('faq-bottom');
+    if(faq&&target){target.appendChild(faq);faq.style.marginTop='22px';}
+  })();
   try{
     const role=localStorage.getItem('cj26_role');
     if(role==='worker'){
