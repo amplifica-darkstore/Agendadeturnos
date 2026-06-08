@@ -262,8 +262,8 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
   <div id="page-period" class="page active" style="padding:24px;min-height:calc(100vh - 120px)">
     <div style="max-width:640px;margin:0 auto">
       <div style="text-align:center;margin-bottom:28px">
-        <div style="font-size:22px;font-weight:800;color:#1a1a6e;margin-bottom:6px">¿A qué evento ingresas?</div>
-        <div style="font-size:13px;color:#64748B">Selecciona el mes o evento para ver los turnos disponibles e inscribirte</div>
+        <div style="font-size:22px;font-weight:800;color:#1a1a6e;margin-bottom:6px">Selecciona un mes</div>
+        <div style="font-size:13px;color:#64748B">Elige el mes para ver los turnos disponibles e inscribirte</div>
       </div>
       <div id="period-cards"></div>
     </div>
@@ -1936,6 +1936,7 @@ function renderPeriodSelector(){
   if(!cont)return;
   const todayISO=(function(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
   const MNAMES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const MNAMES_FULL=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   function fmtRange(from,to){
     const a=from.split('-'),b=to.split('-');
     const af=Number(a[2])+' '+MNAMES[Number(a[1])-1],bt=Number(b[2])+' '+MNAMES[Number(b[1])-1]+' '+b[0];
@@ -1944,7 +1945,6 @@ function renderPeriodSelector(){
   cont.innerHTML=MONTH_DEFS.map(function(m){
     const isActive=todayISO>=m.dateFrom&&todayISO<=m.dateTo;
     const isFuture=todayISO<m.dateFrom;
-    const isPast=todayISO>m.dateTo;
     let badge,cardStyle='';
     if(isActive){
       badge='<span style="background:#1D9E75;color:white;border-radius:99px;padding:3px 11px;font-size:11px;font-weight:700;white-space:nowrap">● Activo</span>';
@@ -1954,23 +1954,46 @@ function renderPeriodSelector(){
     }else{
       badge='<span style="background:#94A3B8;color:white;border-radius:99px;padding:3px 11px;font-size:11px;font-weight:700;white-space:nowrap">Finalizado</span>';
     }
-    const icon=m.isCyber?'💻':'📅';
-    const desc=m.isCyber?'Cyber Dark Store · Evento especial':'Turnos mensuales regulares';
-    return`<div class="period-card" style="${cardStyle}" onclick="selectPeriod('${m.key}')">
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:54px;height:54px;background:${isActive?'linear-gradient(135deg,#1D9E75,#185FA5)':'#F0F4FF'};border-radius:14px;flex-shrink:0">
-        <span style="font-size:10px;font-weight:800;color:${isActive?'white':'#94A3B8'};text-transform:uppercase;letter-spacing:0.05em;line-height:1">Ev.</span>
-        <span style="font-size:22px;font-weight:900;color:${isActive?'white':'#1a1a6e'};line-height:1.1">${m.evento}</span>
-      </div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:15px;font-weight:800;color:#1E293B;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          ${m.label}
-          ${badge}
+    // Ícono y etiqueta del card
+    if(m.isCyber){
+      // Evento especial Cyber
+      const iconBg=isActive?'linear-gradient(135deg,#1a1a6e,#2d2db5)':'#EEF2FF';
+      const iconColor=isActive?'white':'#4338CA';
+      const icon=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:54px;height:54px;background:${iconBg};border-radius:14px;flex-shrink:0">
+        <span style="font-size:20px;line-height:1">💻</span>
+        <span style="font-size:9px;font-weight:800;color:${iconColor};text-transform:uppercase;letter-spacing:0.04em;line-height:1.4">Evento</span>
+      </div>`;
+      const desc='Evento especial Cyber Dark Store';
+      return`<div class="period-card" style="${cardStyle}" onclick="selectPeriod('${m.key}')">
+        ${icon}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:15px;font-weight:800;color:#1E293B;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${m.label} ${badge}</div>
+          <div style="font-size:11px;color:#64748B;margin-top:3px">${desc}</div>
+          <div style="font-size:11px;color:#94A3B8;margin-top:2px;font-family:'DM Mono',monospace">${fmtRange(m.dateFrom,m.dateTo)}</div>
         </div>
-        <div style="font-size:11px;color:#64748B;margin-top:3px">${desc}</div>
-        <div style="font-size:11px;color:#94A3B8;margin-top:2px;font-family:'DM Mono',monospace">${fmtRange(m.dateFrom,m.dateTo)}</div>
-      </div>
-      <i class="ti ti-chevron-right" style="font-size:18px;color:#CBD5E1;flex-shrink:0"></i>
-    </div>`;
+        <i class="ti ti-chevron-right" style="font-size:18px;color:#CBD5E1;flex-shrink:0"></i>
+      </div>`;
+    }else{
+      // Mes normal
+      const monthName=MNAMES_FULL[m.month-1];
+      const monthShort=MNAMES[m.month-1].toUpperCase();
+      const iconBg=isActive?'linear-gradient(135deg,#185FA5,#1D9E75)':'#F0F4FF';
+      const numColor=isActive?'white':'#1a1a6e';
+      const lblColor=isActive?'rgba(255,255,255,0.8)':'#94A3B8';
+      const icon=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:54px;height:54px;background:${iconBg};border-radius:14px;flex-shrink:0">
+        <span style="font-size:13px;font-weight:900;color:${numColor};line-height:1">${monthShort}</span>
+        <span style="font-size:16px;font-weight:900;color:${numColor};line-height:1.1">${m.year}</span>
+      </div>`;
+      return`<div class="period-card" style="${cardStyle}" onclick="selectPeriod('${m.key}')">
+        ${icon}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:15px;font-weight:800;color:#1E293B;display:flex;align-items:center;gap:8px;flex-wrap:wrap">${monthName} ${m.year} ${badge}</div>
+          <div style="font-size:11px;color:#64748B;margin-top:3px">Turnos mensuales · inscríbete en los días disponibles</div>
+          <div style="font-size:11px;color:#94A3B8;margin-top:2px;font-family:'DM Mono',monospace">${fmtRange(m.dateFrom,m.dateTo)}</div>
+        </div>
+        <i class="ti ti-chevron-right" style="font-size:18px;color:#CBD5E1;flex-shrink:0"></i>
+      </div>`;
+    }
   }).join('');
 }
 
