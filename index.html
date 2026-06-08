@@ -262,8 +262,8 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
   <div id="page-period" class="page active" style="padding:24px;min-height:calc(100vh - 120px)">
     <div style="max-width:640px;margin:0 auto">
       <div style="text-align:center;margin-bottom:28px">
-        <div style="font-size:22px;font-weight:800;color:#1a1a6e;margin-bottom:6px">Selecciona un período</div>
-        <div style="font-size:13px;color:#64748B">Elige el mes o evento para ver y gestionar los turnos</div>
+        <div style="font-size:22px;font-weight:800;color:#1a1a6e;margin-bottom:6px">¿A qué evento ingresas?</div>
+        <div style="font-size:13px;color:#64748B">Selecciona el mes o evento para ver los turnos disponibles e inscribirte</div>
       </div>
       <div id="period-cards"></div>
     </div>
@@ -706,11 +706,11 @@ const SHIFT_HOURS={AM:'07:30 – 17:30',PM:'12:00 – 22:00',Nocturno:'21:30 –
 
 // ── Períodos mensuales ────────────────────────────────────────
 const MONTH_DEFS = [
-  { key:'cyber-jun-2026', label:'Cyber Junio 2026',  isCyber:true,  month:6, year:2026, dateFrom:'2026-05-25', dateTo:'2026-06-12' },
-  { key:'jun-2026',       label:'Junio 2026',         isCyber:false, month:6, year:2026, dateFrom:'2026-06-01', dateTo:'2026-06-30' },
-  { key:'jul-2026',       label:'Julio 2026',          isCyber:false, month:7, year:2026, dateFrom:'2026-07-01', dateTo:'2026-07-31' },
-  { key:'ago-2026',       label:'Agosto 2026',         isCyber:false, month:8, year:2026, dateFrom:'2026-08-01', dateTo:'2026-08-31' },
-  { key:'sep-2026',       label:'Septiembre 2026',     isCyber:false, month:9, year:2026, dateFrom:'2026-09-01', dateTo:'2026-09-30' },
+  { key:'cyber-jun-2026', label:'Cyber Junio 2026',  evento:1, isCyber:true,  month:6, year:2026, dateFrom:'2026-05-25', dateTo:'2026-06-12' },
+  { key:'jun-2026',       label:'Junio 2026',         evento:2, isCyber:false, month:6, year:2026, dateFrom:'2026-06-08', dateTo:'2026-06-30' },
+  { key:'jul-2026',       label:'Julio 2026',          evento:3, isCyber:false, month:7, year:2026, dateFrom:'2026-07-01', dateTo:'2026-07-31' },
+  { key:'ago-2026',       label:'Agosto 2026',         evento:4, isCyber:false, month:8, year:2026, dateFrom:'2026-08-01', dateTo:'2026-08-31' },
+  { key:'sep-2026',       label:'Septiembre 2026',     evento:5, isCyber:false, month:9, year:2026, dateFrom:'2026-09-01', dateTo:'2026-09-30' },
 ];
 let currentMonthKey = 'cyber-jun-2026';
 let currentMonthDef = MONTH_DEFS[0];
@@ -1934,19 +1934,42 @@ async function adminEnroll(){
 function renderPeriodSelector(){
   const cont=document.getElementById('period-cards');
   if(!cont)return;
-  const today=new Date();
+  const todayISO=(function(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
+  const MNAMES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  function fmtRange(from,to){
+    const a=from.split('-'),b=to.split('-');
+    const af=Number(a[2])+' '+MNAMES[Number(a[1])-1],bt=Number(b[2])+' '+MNAMES[Number(b[1])-1]+' '+b[0];
+    return af+' — '+bt;
+  }
   cont.innerHTML=MONTH_DEFS.map(function(m){
-    const isPast=(m.year<today.getFullYear())||(m.year===today.getFullYear()&&m.month<today.getMonth()+1);
-    const badge=isPast
-      ?'<span style="margin-left:auto;background:#94A3B8;color:white;border-radius:99px;padding:2px 9px;font-size:11px;font-weight:700">Finalizado</span>'
-      :'<span style="margin-left:auto;background:#1D9E75;color:white;border-radius:99px;padding:2px 9px;font-size:11px;font-weight:700">Activo</span>';
-    return`<div class="period-card" onclick="selectPeriod('${m.key}')">
-      <div class="period-card-icon">${m.isCyber?'💻':'📅'}</div>
-      <div style="flex:1">
-        <div style="font-size:15px;font-weight:700;color:#1E293B">${m.label}</div>
-        <div style="font-size:11px;color:#64748B;margin-top:2px">${m.isCyber?'Cyber Dark Store':'Turnos mensuales · 09:00 a 19:00'}</div>
+    const isActive=todayISO>=m.dateFrom&&todayISO<=m.dateTo;
+    const isFuture=todayISO<m.dateFrom;
+    const isPast=todayISO>m.dateTo;
+    let badge,cardStyle='';
+    if(isActive){
+      badge='<span style="background:#1D9E75;color:white;border-radius:99px;padding:3px 11px;font-size:11px;font-weight:700;white-space:nowrap">● Activo</span>';
+      cardStyle='border-color:#1D9E75;box-shadow:0 4px 16px rgba(29,158,117,0.18)';
+    }else if(isFuture){
+      badge='<span style="background:#185FA5;color:white;border-radius:99px;padding:3px 11px;font-size:11px;font-weight:700;white-space:nowrap">Próximo</span>';
+    }else{
+      badge='<span style="background:#94A3B8;color:white;border-radius:99px;padding:3px 11px;font-size:11px;font-weight:700;white-space:nowrap">Finalizado</span>';
+    }
+    const icon=m.isCyber?'💻':'📅';
+    const desc=m.isCyber?'Cyber Dark Store · Evento especial':'Turnos mensuales regulares';
+    return`<div class="period-card" style="${cardStyle}" onclick="selectPeriod('${m.key}')">
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:54px;height:54px;background:${isActive?'linear-gradient(135deg,#1D9E75,#185FA5)':'#F0F4FF'};border-radius:14px;flex-shrink:0">
+        <span style="font-size:10px;font-weight:800;color:${isActive?'white':'#94A3B8'};text-transform:uppercase;letter-spacing:0.05em;line-height:1">Ev.</span>
+        <span style="font-size:22px;font-weight:900;color:${isActive?'white':'#1a1a6e'};line-height:1.1">${m.evento}</span>
       </div>
-      ${badge}
+      <div style="flex:1;min-width:0">
+        <div style="font-size:15px;font-weight:800;color:#1E293B;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          ${m.label}
+          ${badge}
+        </div>
+        <div style="font-size:11px;color:#64748B;margin-top:3px">${desc}</div>
+        <div style="font-size:11px;color:#94A3B8;margin-top:2px;font-family:'DM Mono',monospace">${fmtRange(m.dateFrom,m.dateTo)}</div>
+      </div>
+      <i class="ti ti-chevron-right" style="font-size:18px;color:#CBD5E1;flex-shrink:0"></i>
     </div>`;
   }).join('');
 }
