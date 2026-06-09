@@ -556,18 +556,40 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
 
       <div class="adm-grid">
         <div class="card">
-          <div class="section-title"><i class="ti ti-calendar-plus" style="color:#7C3AED"></i>Turnos estándar por semana</div>
-          <p style="font-size:11px;color:#64748B;margin-bottom:10px">Crea todos los turnos de Lun–Dom para todas las sucursales con horario estándar. Solo define las vacantes.</p>
+          <!-- Crear turnos (siempre en 0) -->
+          <div class="section-title"><i class="ti ti-calendar-plus" style="color:#7C3AED"></i>Crear turnos estándar por semana</div>
+          <p style="font-size:11px;color:#64748B;margin-bottom:10px">Crea turnos Lun–Dom para todas las sucursales con horario estándar. Se crean en <b>0 vacantes</b> — ábrelos después con la herramienta de abajo.</p>
           <div style="background:#F5F3FF;border:1px solid #C4B5FD;border-radius:10px;padding:10px 12px;margin-bottom:10px;font-size:11px;color:#4C1D95;line-height:1.9">
             <b>Quilicura</b> 08:00–18:00 &nbsp;·&nbsp; <b>Santiago Centro</b> 09:00–19:00<br>
             <b>La Reina</b> 08:00–18:00 &nbsp;·&nbsp; <b>Lo Barnechea</b> 08:30–18:30
           </div>
-          <div class="g2" style="margin-bottom:10px">
-            <div class="form-row"><label>Semana desde</label><select id="std-from"></select></div>
-            <div class="form-row"><label>Vacantes por turno</label><input type="number" id="std-limit" value="4" min="0" max="50"></div>
-          </div>
-          <button class="btn" style="background:#7C3AED;color:white;width:100%;margin-bottom:14px" onclick="createStandardShifts()"><i class="ti ti-bolt" style="margin-right:5px"></i>Crear turnos estándar</button>
+          <div class="form-row" style="margin-bottom:10px"><label>Semana desde</label><select id="std-from"></select></div>
+          <button class="btn" style="background:#7C3AED;color:white;width:100%;margin-bottom:4px" onclick="createStandardShifts()"><i class="ti ti-bolt" style="margin-right:5px"></i>Crear turnos estándar (en 0)</button>
           <div id="std-status" style="font-size:12px;color:#7C3AED;margin-bottom:10px;display:none"></div>
+
+          <!-- Modificar vacantes masivamente -->
+          <div style="background:#EFF6FF;border:1px solid #93C5FD;border-radius:10px;padding:12px;margin-bottom:10px;margin-top:10px">
+            <div style="font-size:12px;font-weight:700;color:#1E40AF;margin-bottom:6px"><i class="ti ti-pencil" style="margin-right:4px"></i>Modificar vacantes masivamente</div>
+            <div style="font-size:11px;color:#1E40AF;margin-bottom:10px">Selecciona sucursales, rango de días y nuevas vacantes. Solo modifica turnos ya existentes.</div>
+            <div style="margin-bottom:8px">
+              <div style="font-size:10px;font-weight:700;color:#1E40AF;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px">Sucursales</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer"><input type="checkbox" id="bulk-br-quilicura" checked style="accent-color:#3B82F6;width:13px;height:13px"> <span style="color:#1D4ED8">Quilicura</span></label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer"><input type="checkbox" id="bulk-br-sc" checked style="accent-color:#A855F7;width:13px;height:13px"> <span style="color:#7E22CE">Santiago Centro</span></label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer"><input type="checkbox" id="bulk-br-lb" checked style="accent-color:#F97316;width:13px;height:13px"> <span style="color:#C2410C">Lo Barnechea</span></label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer"><input type="checkbox" id="bulk-br-lr" checked style="accent-color:#22C55E;width:13px;height:13px"> <span style="color:#15803D">La Reina</span></label>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+              <div class="form-row" style="margin:0"><label style="font-size:10px">Desde</label><input type="date" id="bulk-from" style="padding:5px 8px;border:1.5px solid #93C5FD;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;width:100%;box-sizing:border-box"></div>
+              <div class="form-row" style="margin:0"><label style="font-size:10px">Hasta</label><input type="date" id="bulk-to" style="padding:5px 8px;border:1.5px solid #93C5FD;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;width:100%;box-sizing:border-box"></div>
+            </div>
+            <div class="form-row" style="margin-bottom:8px"><label style="font-size:10px">Vacantes a asignar</label><input type="number" id="bulk-limit" value="4" min="0" max="50" style="padding:5px 8px;border:1.5px solid #93C5FD;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;width:100%;box-sizing:border-box"></div>
+            <button class="btn" style="background:#1D4ED8;color:white;width:100%;font-size:12px;padding:9px" onclick="bulkSetVacantes()"><i class="ti ti-adjustments" style="margin-right:4px"></i>Aplicar vacantes al rango</button>
+            <div id="bulk-status" style="font-size:12px;color:#1E40AF;margin-top:6px;display:none"></div>
+          </div>
+
+          <!-- Cierre de vacantes -->
           <div style="background:#F0FDF4;border:1px solid #86EFAC;border-radius:10px;padding:12px;margin-bottom:10px">
             <div style="font-size:12px;font-weight:700;color:#166534;margin-bottom:8px"><i class="ti ti-lock" style="margin-right:4px"></i>Cierre de vacantes</div>
             <div style="font-size:11px;color:#15803D;margin-bottom:8px">Elige el rango de días y deja todas las vacantes en 0.</div>
@@ -2108,7 +2130,6 @@ async function createStandardShifts(){
   if(_creatingStdShifts){showToast('Ya está creando turnos, espera...','err');return;}
   _creatingStdShifts=true;
   const fromVal=document.getElementById('std-from').value;
-  const limit=parseInt(document.getElementById('std-limit').value)||6;
   const status=document.getElementById('std-status');
   if(!fromVal){_creatingStdShifts=false;showToast('Selecciona la semana de inicio','err');return;}
   const def=currentMonthDef||MONTH_DEFS[0];
@@ -2141,7 +2162,7 @@ async function createStandardShifts(){
     try{
       // Deterministic ID: same branch+date always = same ID, prevents duplicates on double-click
       const id='std-'+t.branch.replace(/\s+/g,'').toLowerCase()+'-'+t.date;
-      const shift={id,branch:t.branch,shift:'Estándar',date:t.date,limit,enrolled:[],horario:STANDARD_HORARIO[t.branch]||''};
+      const shift={id,branch:t.branch,shift:'Estándar',date:t.date,limit:0,enrolled:[],horario:STANDARD_HORARIO[t.branch]||''};
       const res=await apiCall({action:'saveShift',shift:shift,monthKey:currentMonthKey});
       if(res&&res.ok)created++;else errors++;
     }catch(e){errors++;}
@@ -2172,6 +2193,39 @@ async function closeAllVacantesNow(){
   status.textContent=`✓ ${updated} turnos cerrados a 0${errors?' — '+errors+' errores':''}`;
   showToast(`✓ ${updated} turnos cerrados a 0`,'ok');
   setTimeout(()=>{status.style.display='none';},8000);
+}
+
+async function bulkSetVacantes(){
+  const fromVal=document.getElementById('bulk-from').value;
+  const toVal=document.getElementById('bulk-to').value;
+  const newLimit=parseInt(document.getElementById('bulk-limit').value)||0;
+  const status=document.getElementById('bulk-status');
+  const branches=[];
+  if(document.getElementById('bulk-br-quilicura').checked) branches.push('Quilicura');
+  if(document.getElementById('bulk-br-sc').checked) branches.push('Santiago Centro');
+  if(document.getElementById('bulk-br-lb').checked) branches.push('Lo Barnechea');
+  if(document.getElementById('bulk-br-lr').checked) branches.push('La Reina');
+  if(!fromVal||!toVal){showToast('Elige fecha desde y hasta','err');return;}
+  if(fromVal>toVal){showToast('La fecha "desde" debe ser anterior a "hasta"','err');return;}
+  if(!branches.length){showToast('Selecciona al menos una sucursal','err');return;}
+  status.style.display='block';status.textContent='⏳ Cargando turnos...';
+  await loadShifts();
+  let updated=0,errors=0;
+  for(const s of shifts){
+    if(!branches.includes(s.branch))continue;
+    if(s.date<fromVal||s.date>toVal)continue;
+    if(s.limit===newLimit)continue;
+    const old=s.limit;s.limit=newLimit;
+    try{
+      const res=await apiCall({action:'saveShift',shift:s,monthKey:currentMonthKey});
+      if(res&&res.ok)updated++;else{s.limit=old;errors++;}
+    }catch(e){s.limit=old;errors++;}
+    status.textContent=`⏳ Actualizando... ${updated} turnos`;
+  }
+  renderAdmin();populateAdminSel();
+  status.textContent=`✓ ${updated} turnos actualizados a ${newLimit} vacantes${errors?' — '+errors+' errores':''}`;
+  showToast(`✓ ${updated} turnos → ${newLimit} vacantes`,'ok');
+  setTimeout(()=>{status.style.display='none';},6000);
 }
 
 async function closePeriodVacantes(){
