@@ -684,7 +684,7 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
         <div>
           <div style="font-size:17px;font-weight:700;color:#1E293B">Mi historial de turnos</div>
-          <div style="font-size:12px;color:#64748B" id="history-period-label"></div>
+          <div style="font-size:12px;color:#64748B">Todos los períodos</div>
         </div>
       </div>
       <div id="history-content"><div class="loading"><i class="ti ti-refresh"></i>Cargando...</div></div>
@@ -1573,8 +1573,6 @@ function goTab(tab,e){
   }else if(tab==='history'){
     if(!myRut)return;
     allPages('page-history');
-    const lbl=document.getElementById('history-period-label');
-    if(lbl)lbl.textContent=currentMonthDef?currentMonthDef.label:'';
     renderHistory();
   }
 }
@@ -2368,39 +2366,52 @@ function selectPeriod(key){
 }
 
 // ── History ───────────────────────────────────────────────────
-function renderHistory(){
+async function renderHistory(){
   const cont=document.getElementById('history-content');
   if(!cont)return;
   if(!myRut){cont.innerHTML='<p class="loading">Inicia sesión para ver tu historial.</p>';return;}
-  const mine=shifts.filter(function(s){return(s.enrolled||[]).some(function(e){return e.rut===myRut;});});
-  if(!mine.length){cont.innerHTML='<div class="loading"><i class="ti ti-calendar-off" style="font-size:36px;display:block;margin-bottom:10px"></i><p>No tienes turnos registrados en este período.</p></div>';return;}
-  const sorted=[...mine].sort(function(a,b){return a.date>b.date?-1:1;});
+  cont.innerHTML='<div class="loading"><i class="ti ti-refresh"></i>Cargando historial...</div>';
+  // Fetch all periods to build a complete history
+  let allMine=[];
+  try{
+    const results=await Promise.all(MONTH_DEFS.map(function(m){
+      return apiCall({action:'getShifts',monthKey:m.key}).then(function(r){
+        const list=(r&&r.shifts)||[];
+        return list.filter(function(s){return(s.enrolled||[]).some(function(e){return e.rut===myRut;});})
+                   .map(function(s){return Object.assign({},s,{_periodLabel:m.label});});
+      }).catch(function(){return[];});
+    }));
+    results.forEach(function(arr){allMine=allMine.concat(arr);});
+  }catch(e){
+    cont.innerHTML='<div class="loading">Error al cargar historial.</div>';return;
+  }
+  if(!allMine.length){cont.innerHTML='<div class="loading" style="text-align:center;padding:32px"><i class="ti ti-calendar-off" style="font-size:36px;display:block;margin-bottom:10px"></i><p>No tienes turnos registrados.</p></div>';return;}
+  const sorted=[...allMine].sort(function(a,b){
+    const da=parseDate(a.date),db=parseDate(b.date);
+    if(!da||!db)return 0;
+    return db-da;
+  });
   const today=new Date();today.setHours(0,0,0,0);
+  const CARD_BG={AM:'linear-gradient(135deg,#F0FDF4,#DCFCE7)',PM:'linear-gradient(135deg,#FFFBEB,#FEF3C7)',Nocturno:'linear-gradient(135deg,#F5F3FF,#EDE9FE)'};
+  const CARD_BORDER={AM:'#86EFAC',PM:'#FDE68A',Nocturno:'#C4B5FD'};
   let html='';
   sorted.forEach(function(s){
     const dt=parseDate(s.date);
     const past=dt&&dt<today;
     const myE=(s.enrolled||[]).find(function(e){return e.rut===myRut;});
-    const CARD_BG={AM:'linear-gradient(135deg,#F0FDF4,#DCFCE7)',PM:'linear-gradient(135deg,#FFFBEB,#FEF3C7)',Nocturno:'linear-gradient(135deg,#F5F3FF,#EDE9FE)'};
-    const CARD_BORDER={AM:'#86EFAC',PM:'#FDE68A',Nocturno:'#C4B5FD'};
-    html+=`<div style="background:${CARD_BG[s.shift]||'white'};border:1.5px solid ${CARD_BORDER[s.shift]||'#E2E8F0'};border-radius:14px;padding:14px 16px;margin-bottom:10px;opacity:${past?0.7:1}">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+    const bc=BRANCH_COLORS[s.branch]||{dot:'#94A3B8'};
+    html+=`<div style="background:${CARD_BG[s.shift]||'white'};border:1.5px solid ${CARD_BORDER[s.shift]||'#E2E8F0'};border-left:4px solid ${bc.dot};border-radius:14px;padding:14px 16px;margin-bottom:10px;opacity:${past?0.75:1}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
         <span class="badge ${SHIFT_BADGE[s.shift]||'b-am'}">${s.shift}</span>
         <span style="font-size:13px;font-weight:700;color:#1E293B">${fmtDate(s.date)}</span>
-        ${past?'<span style="margin-left:auto;font-size:10px;color:#94A3B8;font-weight:600;background:#F1F5F9;border-radius:99px;padding:2px 8px">Pasado</span>':'<span style="margin-left:auto;font-size:10px;color:#166534;font-weight:700;background:#DCFCE7;border-radius:99px;padding:2px 8px">✓ Inscrito</span>'}
+        <span style="font-size:10px;color:#64748B;background:#F1F5F9;border-radius:99px;padding:2px 8px">${s._periodLabel||''}</span>
+        ${past?'<span style="margin-left:auto;font-size:10px;color:#94A3B8;font-weight:600;background:#F1F5F9;border-radius:99px;padding:2px 8px">Pasado</span>':'<span style="margin-left:auto;font-size:10px;color:#166634;font-weight:700;background:#DCFCE7;border-radius:99px;padding:2px 8px">✓ Próximo</span>'}
       </div>
       <div style="font-size:12px;color:#475569"><i class="ti ti-building-store" style="font-size:12px;margin-right:4px"></i>${s.branch} · ${getHorario(s)}</div>
       ${myE&&myE.enrolledAt?`<div style="font-size:10px;color:#94A3B8;margin-top:4px">Inscrito el ${fmtTs(myE.enrolledAt)}</div>`:''}
-      ${myE?(()=>{
-        const aCol={'Sí':'#059669','No':'#EF4444','Pendiente':'#F59E0B'}[myE.asistio]||'#94A3B8';
-        const pCol={'Pagado':'#059669','1ra Quincena':'#185FA5','2da Quincena':'#7C3AED','Pendiente':'#F59E0B'}[myE.pago]||'#94A3B8';
-        const aLbl=myE.asistio?myE.asistio:'—';
-        const pLbl=myE.pago?myE.pago:'—';
-        return `<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><span style="font-size:10px;font-weight:600;padding:2px 9px;border-radius:99px;background:${aCol}22;color:${aCol};border:1px solid ${aCol}44">Asistencia: ${aLbl}</span><span style="font-size:10px;font-weight:600;padding:2px 9px;border-radius:99px;background:${pCol}22;color:${pCol};border:1px solid ${pCol}44">Pago: ${pLbl}</span></div>`;
-      })():''}
     </div>`;
   });
-  cont.innerHTML=html;
+  cont.innerHTML=`<div style="font-size:11px;color:#64748B;font-weight:600;margin-bottom:12px">${allMine.length} turno${allMine.length===1?'':'s'} en total</div>`+html;
 }
 
 function populateDates(){
