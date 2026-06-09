@@ -1715,8 +1715,10 @@ function renderWorker(){
     const bList=list.filter(s=>s.branch===branch);
     if(!bList.length)return;
 
-    const branchAddresses={'Quilicura':'El Juncal 901, Bodega 9','Santiago Centro':'Carmen 1323, Santiago','La Reina':'Av. Ossa 235, Local 4','Lo Barnechea':'Camino Los Trapenses 3200, -3'}; html+=`<div style="margin-bottom:28px">
-      <div class="branch-header" style="font-size:18px">
+    const branchAddresses={'Quilicura':'El Juncal 901, Bodega 9','Santiago Centro':'Carmen 1323, Santiago','La Reina':'Av. Ossa 235, Local 4','Lo Barnechea':'Camino Los Trapenses 3200, -3'};
+    const bc=BRANCH_COLORS[branch]||{bg:'#EFF6FF',border:'#3B82F6',text:'#1D4ED8',dot:'#3B82F6'};
+    html+=`<div style="margin-bottom:28px">
+      <div class="branch-header" style="font-size:18px;background:linear-gradient(135deg,${bc.dot},${bc.border})">
         <div>
           <div style="display:flex;align-items:center;gap:8px">
             <i class="ti ti-building-store" style="font-size:16px"></i>
@@ -1797,6 +1799,7 @@ function shiftCardCompact(s){
   const vcol=vac===0?'#EF4444':vac<=2?'#F59E0B':'#059669';
   const conflictResult=!mine?hasConflict(myRut,s.shift,s.date):{conflict:false};
   const conflict=conflictResult.conflict,conflictReason=conflictResult.reason||'';
+  const bc=BRANCH_COLORS[s.branch]||{bg:'#F8FAFC',border:'#E2E8F0',text:'#475569',dot:'#94A3B8'};
   const CARD_BG={AM:'linear-gradient(135deg,#F0FDF4,#DCFCE7)',PM:'linear-gradient(135deg,#FFFBEB,#FEF3C7)',Nocturno:'linear-gradient(135deg,#F5F3FF,#EDE9FE)'};
   const CARD_BORDER={AM:'#86EFAC',PM:'#FDE68A',Nocturno:'#C4B5FD'};
   let btn='';
@@ -1808,7 +1811,7 @@ function shiftCardCompact(s){
   else if(full){btn=`<button class="btn btn-disabled" style="margin-top:6px;padding:6px 10px;font-size:11px"><i class="ti ti-lock" style="margin-right:3px"></i>Sin vacantes</button>`;}
   else{btn=`<button class="btn btn-green" style="margin-top:6px;padding:6px 10px;font-size:12px" onclick="enroll('${s.id}')"><i class="ti ti-plus" style="margin-right:3px"></i>Inscribirme</button>`;}
 
-  return `<div style="background:${CARD_BG[s.shift]};border:1.5px solid ${CARD_BORDER[s.shift]};border-radius:12px;padding:10px 12px">
+  return `<div style="background:${CARD_BG[s.shift]||bc.bg};border:1.5px solid ${CARD_BORDER[s.shift]||bc.border};border-left:4px solid ${bc.dot};border-radius:12px;padding:10px 12px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
       <div style="display:flex;align-items:center;gap:6px">
         <span class="badge ${SHIFT_BADGE[s.shift]}">${s.shift}</span>
