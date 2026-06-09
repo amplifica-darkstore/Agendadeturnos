@@ -214,9 +214,9 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <div id="topbar-actions"></div>
           <div class="tabs">
-            <button class="tab active" id="tab-worker" onclick="goTab('worker',event)"><i class="ti ti-hard-hat" style="font-size:13px;margin-right:4px"></i>Trabajador</button>
+            <button class="tab" id="tab-worker" onclick="goTab('worker',event)" style="display:none"><i class="ti ti-hard-hat" style="font-size:13px;margin-right:4px"></i>Turnos</button>
             <button class="tab" id="tab-history" onclick="goTab('history',event)" style="display:none"><i class="ti ti-history" style="font-size:13px;margin-right:4px"></i>Mi historial</button>
-            <button class="tab" id="tab-admin" onclick="goTab('admin',event)"><i class="ti ti-settings" style="font-size:13px;margin-right:4px"></i>Admin</button>
+            <button class="tab active" id="tab-admin" onclick="goTab('admin',event)" style="display:none"><i class="ti ti-settings" style="font-size:13px;margin-right:4px"></i>Admin</button>
             <button class="tab" id="tab-overview" onclick="goTab('overview',event)" style="display:none"><i class="ti ti-table" style="font-size:13px;margin-right:4px"></i>Resumen</button>
           </div>
         </div>
@@ -1355,9 +1355,12 @@ function doLoginAdmin(){
 
 function openWorkerPage(){
   allPages('page-worker');
+  // Worker tabs: Turnos + Mi historial only
+  document.getElementById('tab-worker').style.display='flex';
   document.getElementById('tab-worker').classList.add('active');
   document.getElementById('tab-history').style.display='flex';
-  document.getElementById('tab-admin').classList.remove('active');
+  document.getElementById('tab-admin').style.display='none';
+  document.getElementById('tab-overview').style.display='none';
   document.getElementById('topbar-actions').innerHTML='';
   document.getElementById('w-name-display').textContent=myName;
   document.getElementById('w-rut-display').textContent=myRut;
@@ -1367,9 +1370,12 @@ function openWorkerPage(){
 
 function openAdminPage(){
   allPages('page-admin');
+  // Admin tabs: Admin + Resumen only
+  document.getElementById('tab-admin').style.display='flex';
   document.getElementById('tab-admin').classList.add('active');
-  document.getElementById('tab-worker').classList.remove('active');
   document.getElementById('tab-overview').style.display='flex';
+  document.getElementById('tab-worker').style.display='none';
+  document.getElementById('tab-history').style.display='none';
   renderAdminTopbarActions();
   populateWeekFilters();populateDates();populateStdFrom();
   loadAndRenderAdmin();
@@ -1514,8 +1520,10 @@ function logout(){
   document.getElementById('form-worker').style.display='none';document.getElementById('form-admin').style.display='none';
   document.getElementById('btn-role-worker').classList.remove('selected');document.getElementById('btn-role-admin').classList.remove('selected');
   document.getElementById('topbar-actions').innerHTML='';
-  document.getElementById('tab-worker').classList.add('active');document.getElementById('tab-admin').classList.remove('active');
-  document.getElementById('tab-overview').style.display='none';
+  ['tab-worker','tab-history','tab-admin','tab-overview'].forEach(function(id){
+    const el=document.getElementById(id);
+    if(el){el.style.display='none';el.classList.remove('active');}
+  });
   allPages('page-login');
 }
 function allPages(show){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.getElementById(show).classList.add('active');}
