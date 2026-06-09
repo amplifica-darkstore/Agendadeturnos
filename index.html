@@ -215,7 +215,8 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
           <div class="tabs">
             <button class="tab active" id="tab-worker" onclick="goTab('worker',event)"><i class="ti ti-hard-hat" style="font-size:13px;margin-right:4px"></i>Trabajador</button>
             <button class="tab" id="tab-history" onclick="goTab('history',event)" style="display:none"><i class="ti ti-history" style="font-size:13px;margin-right:4px"></i>Mi historial</button>
-            <button class="tab" id="tab-admin" onclick="goTab('admin',event)"><i class="ti ti-shield-check" style="font-size:13px;margin-right:4px"></i>Administrador</button>
+            <button class="tab" id="tab-admin" onclick="goTab('admin',event)"><i class="ti ti-calendar-month" style="font-size:13px;margin-right:4px"></i>Meses</button>
+            <button class="tab" id="tab-cyber" onclick="goTab('cyber',event)" style="display:none"><i class="ti ti-device-laptop" style="font-size:13px;margin-right:4px"></i>Cyber / Eventos</button>
             <button class="tab" id="tab-overview" onclick="goTab('overview',event)" style="display:none"><i class="ti ti-table" style="font-size:13px;margin-right:4px"></i>Resumen</button>
           </div>
         </div>
@@ -729,8 +730,8 @@ const MONTH_DEFS = [
   { key:'ago-2026',       label:'Agosto 2026',         evento:4, isCyber:false, month:8, year:2026, dateFrom:'2026-08-01', dateTo:'2026-08-31' },
   { key:'sep-2026',       label:'Septiembre 2026',     evento:5, isCyber:false, month:9, year:2026, dateFrom:'2026-09-01', dateTo:'2026-09-30' },
 ];
-let currentMonthKey = 'cyber-jun-2026';
-let currentMonthDef = MONTH_DEFS[0];
+let currentMonthKey = 'jun-2026';
+let currentMonthDef = MONTH_DEFS.find(function(m){return m.key==='jun-2026';})||MONTH_DEFS[0];
 
 // Devuelve el horario real considerando reglas especiales:
 // - Domingos (todas las sucursales): AM = 09:00 - 19:00
@@ -1297,7 +1298,14 @@ function openAdminPage(){
   document.getElementById('tab-admin').classList.add('active');
   document.getElementById('tab-worker').classList.remove('active');
   document.getElementById('tab-overview').style.display='flex';
+  document.getElementById('tab-cyber').style.display='flex';
+  // Asegurar que al abrir admin se esté en un mes normal
+  if(currentMonthDef&&currentMonthDef.isCyber){
+    currentMonthKey='jun-2026';
+    currentMonthDef=MONTH_DEFS.find(function(m){return m.key==='jun-2026';})||MONTH_DEFS[1];
+  }
   renderAdminTopbarActions();
+  populateWeekFilters();populateDates();populateStdFrom();
   loadAndRenderAdmin();
 }
 
@@ -1413,12 +1421,19 @@ function goTab(tab,e){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   e.target.closest('.tab').classList.add('active');
   if(tab==='worker'){
-    if(myRole==='admin'){myRole='';myRut='';myName='';try{localStorage.removeItem('cj26_role');}catch(e){}document.getElementById('topbar-actions').innerHTML='';document.getElementById('tab-overview').style.display='none';allPages('page-login');return;}
+    if(myRole==='admin'){myRole='';myRut='';myName='';try{localStorage.removeItem('cj26_role');}catch(e){}document.getElementById('topbar-actions').innerHTML='';document.getElementById('tab-overview').style.display='none';document.getElementById('tab-cyber').style.display='none';allPages('page-login');return;}
     if(!myRut){allPages('page-login');return;}
     allPages('page-worker');loadAndRenderWorker();
   }else if(tab==='admin'){
     if(myRole!=='admin'){allPages('page-login');document.getElementById('form-admin').style.display='block';document.getElementById('form-worker').style.display='none';document.getElementById('btn-role-admin').classList.add('selected');document.getElementById('btn-role-worker').classList.remove('selected');return;}
+    // Meses normales: cambiar a jun-2026 si estaba en Cyber
+    if(currentMonthDef&&currentMonthDef.isCyber){switchPeriodFromFilter('jun-2026','admin');return;}
     allPages('page-admin');loadAndRenderAdmin();
+  }else if(tab==='cyber'){
+    if(myRole!=='admin')return;
+    // Cambiar al período Cyber
+    switchPeriodFromFilter('cyber-jun-2026','admin');
+    allPages('page-admin');
   }else if(tab==='overview'){
     if(myRole!=='admin')return;
     allPages('page-overview');loadAndRenderOverview();
@@ -1848,7 +1863,7 @@ function renderAdmin(){
   r.innerHTML=filteredShifts.map(s=>{
     const en=s.enrolled||[],vac=Math.max(0,s.limit-en.length),pct=s.limit>0?Math.round((en.length/s.limit)*100):0,fc=pct>=100?'full':pct>=60?'warn':'';
     const vcol=vac===0?'#EF4444':vac<=2?'#F59E0B':'#059669';
-    return `<div class="roster-item"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px"><div><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span class="badge ${SHIFT_BADGE[s.shift]}">${s.shift}</span><span style="font-size:13px;font-weight:700;color:#1E293B">${fmtDate(s.date)}</span></div><div style="font-size:11px;color:#64748B;margin-top:4px;font-weight:500">${s.branch}</div></div><div style="display:flex;align-items:center;gap:10px"><div style="text-align:right"><div style="font-size:20px;font-weight:800;color:${vcol}">${vac}</div><div style="font-size:10px;color:#94A3B8;text-transform:uppercase;font-weight:600">vacantes</div></div><button onclick="toggleEditVacantes('${s.id}')" style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;cursor:pointer;color:#1E40AF;padding:7px 9px" title="Editar vacantes"><i class="ti ti-edit" style="font-size:14px"></i></button><button onclick="adminDelShift('${s.id}')" style="background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;cursor:pointer;color:#EF4444;padding:7px 9px" title="Eliminar turno"><i class="ti ti-trash" style="font-size:14px"></i></button></div></div><div id="edit-vacantes-${s.id}" style="display:none;gap:8px;align-items:center;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:8px 12px;margin:8px 0"><span style="font-size:12px;color:#1E40AF;font-weight:600">Nuevas vacantes totales:</span><input type="number" id="edit-limit-${s.id}" value="${s.limit}" min="${en.length}" max="100" style="width:70px;padding:5px 8px;border:1.5px solid #93C5FD;border-radius:8px;font-size:13px;font-family:DM Sans,sans-serif;color:#1E293B"><button onclick="saveEditVacantes('${s.id}')" style="background:#185FA5;color:white;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:DM Sans,sans-serif">Guardar</button><button onclick="cancelEditVacantes('${s.id}')" style="background:white;color:#64748B;border:1px solid #E2E8F0;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;font-family:DM Sans,sans-serif">Cancelar</button></div><div class="progress-bar"><div class="pf ${fc}" style="width:${Math.min(pct,100)}%"></div></div><div style="font-size:11px;color:#64748B;font-weight:600;margin-bottom:8px">${en.length} de ${s.limit} inscritos</div><div style="display:flex;flex-wrap:wrap;gap:4px">${en.length?en.map(e=>`<div class="user-tag"><strong style="color:#1E293B">${e.name}</strong><span>${e.rut}</span><div style="display:flex;gap:4px;margin-top:4px;flex-wrap:wrap"><select onchange="updateAtt('${s.id}','${e.rut}','asistio',this.value)" style="font-size:10px;padding:2px 5px;border:1px solid #E2E8F0;border-radius:6px;font-family:'DM Sans',sans-serif;background:white;color:#1E293B" title="Asistencia"><option value=""${!e.asistio?' selected':''}>Asistencia</option><option value="Sí"${e.asistio==='Sí'?' selected':''}>✓ Sí</option><option value="No"${e.asistio==='No'?' selected':''}>✗ No</option><option value="Pendiente"${e.asistio==='Pendiente'?' selected':''}>⏳ Pendiente</option></select><select onchange="updateAtt('${s.id}','${e.rut}','pago',this.value)" style="font-size:10px;padding:2px 5px;border:1px solid #E2E8F0;border-radius:6px;font-family:'DM Sans',sans-serif;background:white;color:#1E293B" title="Pago"><option value=""${!e.pago?' selected':''}>Pago</option><option value="Pendiente"${e.pago==='Pendiente'?' selected':''}>⏳ Pendiente</option><option value="1ra Quincena"${e.pago==='1ra Quincena'?' selected':''}>1ra Quinc.</option><option value="2da Quincena"${e.pago==='2da Quincena'?' selected':''}>2da Quinc.</option><option value="Pagado"${e.pago==='Pagado'?' selected':''}>✓ Pagado</option></select></div><button class="btn-remove" onclick="adminDelPerson('${s.id}','${e.rut}')"><i class="ti ti-x" style="font-size:10px;margin-right:2px"></i>Eliminar</button></div>`).join(''):'<span style="font-size:11px;color:#94A3B8">Sin inscritos aún</span>'}</div></div>`;
+    return `<div class="roster-item"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px"><div><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span class="badge ${SHIFT_BADGE[s.shift]}">${s.shift}</span><span style="font-size:13px;font-weight:700;color:#1E293B">${fmtDate(s.date)}</span></div><div style="font-size:11px;color:#64748B;margin-top:4px;font-weight:500">${s.branch}</div></div><div style="display:flex;align-items:center;gap:10px"><div style="text-align:right"><div style="font-size:20px;font-weight:800;color:${vcol}">${vac}</div><div style="font-size:10px;color:#94A3B8;text-transform:uppercase;font-weight:600">vacantes</div></div><button onclick="toggleEditVacantes('${s.id}')" style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;cursor:pointer;color:#1E40AF;padding:7px 9px" title="Editar vacantes"><i class="ti ti-edit" style="font-size:14px"></i></button><button onclick="adminDelShift('${s.id}')" style="background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;cursor:pointer;color:#EF4444;padding:7px 9px" title="Eliminar turno"><i class="ti ti-trash" style="font-size:14px"></i></button></div></div><div id="edit-vacantes-${s.id}" style="display:none;gap:8px;align-items:center;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:8px 12px;margin:8px 0"><span style="font-size:12px;color:#1E40AF;font-weight:600">Nuevas vacantes totales:</span><input type="number" id="edit-limit-${s.id}" value="${s.limit}" min="${en.length}" max="100" style="width:70px;padding:5px 8px;border:1.5px solid #93C5FD;border-radius:8px;font-size:13px;font-family:DM Sans,sans-serif;color:#1E293B"><button onclick="saveEditVacantes('${s.id}')" style="background:#185FA5;color:white;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:DM Sans,sans-serif">Guardar</button><button onclick="cancelEditVacantes('${s.id}')" style="background:white;color:#64748B;border:1px solid #E2E8F0;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;font-family:DM Sans,sans-serif">Cancelar</button></div><div class="progress-bar"><div class="pf ${fc}" style="width:${Math.min(pct,100)}%"></div></div><div style="font-size:11px;color:#64748B;font-weight:600;margin-bottom:8px">${en.length} de ${s.limit} inscritos</div><div style="display:flex;flex-wrap:wrap;gap:4px">${en.length?en.map(e=>`<div class="user-tag"><strong style="color:#1E293B">${e.name}</strong><span>${e.rut}</span><button class="btn-remove" onclick="adminDelPerson('${s.id}','${e.rut}')"><i class="ti ti-x" style="font-size:10px;margin-right:2px"></i>Eliminar</button></div>`).join(''):'<span style="font-size:11px;color:#94A3B8">Sin inscritos aún</span>'}</div></div>`;
   }).join('');
 }
 
