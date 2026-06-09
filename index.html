@@ -824,6 +824,7 @@ const CANCEL_HOURS=48; // horas antes del turno para poder cancelar
 // DATES now generated dynamically per selected month (see populateDates)
 
 let myRut='',myName='',myRole='',myEmail='',shifts=[];
+let allPeriodsShifts=[]; // cross-period enrolled cache for conflict detection
 let timerInterval=null;
 const API='https://script.google.com/macros/s/AKfycbyWmyYI6JSXNjy0OEHHU8kLg0_OTE7o752Xgr01cbNTq07g9SOQBCw36LUQP61MLVLE/exec';
 
@@ -979,14 +980,17 @@ function hasConflict(rut,type,date){
   const thisDate=parseShiftDate(date);
   const thisISO=fmtDateISO(date);
 
-  // Max 1 turno por día (cualquier sucursal, cualquier tipo)
-  if(shifts.some(s=>fmtDateISO(s.date)===thisISO&&(s.enrolled||[]).some(e=>e.rut===rut)))
+  // Check across ALL periods (current + cached) to prevent same-day across different events
+  const allShiftsToCheck=[...shifts,...allPeriodsShifts.filter(s=>!shifts.some(x=>x.id===s.id))];
+
+  // Max 1 turno por día (cualquier sucursal, cualquier período)
+  if(allShiftsToCheck.some(s=>fmtDateISO(s.date)===thisISO&&(s.enrolled||[]).some(e=>e.rut===rut)))
     return{conflict:true,reason:'Ya tienes un turno ese día (máx. 1 por día)'};
 
-  // Max 5 turnos por semana
+  // Max 5 turnos por semana (across all periods)
   const isoWeek=function(d){const j=new Date(d.getFullYear(),0,1);return Math.ceil(((d-j)/86400000+j.getDay()+1)/7);};
   const tWeek=isoWeek(thisDate),tYear=thisDate.getFullYear();
-  const weekCount=shifts.filter(s=>{
+  const weekCount=allShiftsToCheck.filter(s=>{
     if(!(s.enrolled||[]).some(e=>e.rut===rut))return false;
     const sd=parseShiftDate(s.date);
     return isoWeek(sd)===tWeek&&sd.getFullYear()===tYear;
@@ -996,15 +1000,14 @@ function hasConflict(rut,type,date){
   // Same-day overlaps: AM+PM, PM+Nocturno
   const overlaps={AM:['PM'],PM:['AM','Nocturno'],Nocturno:['PM']};
   for(const other of (overlaps[type]||[])){
-    if(shifts.some(s=>s.shift===other&&fmtDateISO(s.date)===thisISO&&(s.enrolled||[]).some(e=>e.rut===rut)))
+    if(allShiftsToCheck.some(s=>s.shift===other&&fmtDateISO(s.date)===thisISO&&(s.enrolled||[]).some(e=>e.rut===rut)))
       return{conflict:true,reason:`El turno ${type} se solapa con el turno ${other} que ya tienes ese día`};
   }
 
-  // Cross-day conflict: Nocturno (21:30-07:30) bloquea AM del día siguiente
-  // Si quiero tomar AM de hoy, verificar que no tenga Nocturno AYER
+  // Cross-day conflict: Nocturno bloquea AM del día siguiente
   if(type==='AM'){
     const prevDate=new Date(thisDate); prevDate.setDate(prevDate.getDate()-1);
-    if(shifts.some(s=>s.shift==='Nocturno'&&(s.enrolled||[]).some(e=>e.rut===rut)&&parseShiftDate(s.date).toDateString()===prevDate.toDateString()))
+    if(allShiftsToCheck.some(s=>s.shift==='Nocturno'&&(s.enrolled||[]).some(e=>e.rut===rut)&&parseShiftDate(s.date).toDateString()===prevDate.toDateString()))
       return{conflict:true,reason:'Tienes Nocturno la noche anterior (termina a las 07:30)'};
   }
   // Si quiero tomar Nocturno hoy, verificar que no tenga AM MAÑANA
@@ -1671,7 +1674,11 @@ async function delShift(id){
 async function loadAndRenderWorker(){
   document.getElementById('loading-worker').style.display='block';
   document.getElementById('worker-content').innerHTML='';
-  await loadShifts();
+  // Load current period shifts + all periods for cross-period conflict detection
+  await Promise.all([
+    loadShifts(),
+    loadAllPeriodsCache()
+  ]);
   loadBlockedRuts().then(function(){
     const banner=document.getElementById('blocked-banner');
     if(banner)banner.style.display=isBlocked(myRut)?'block':'none';
@@ -1679,6 +1686,21 @@ async function loadAndRenderWorker(){
   document.getElementById('loading-worker').style.display='none';
   renderWorker();
   clearInterval(timerInterval);timerInterval=setInterval(refreshTimers,30000);
+}
+
+// Load enrolled shifts from ALL periods into allPeriodsShifts for cross-period conflict check
+async function loadAllPeriodsCache(){
+  if(!myRut)return;
+  try{
+    const results=await Promise.all(MONTH_DEFS.map(function(m){
+      return apiCall({action:'getShifts',monthKey:m.key}).then(function(r){
+        return((r&&r.shifts)||[]).filter(function(s){
+          return(s.enrolled||[]).some(function(e){return e.rut===myRut;});
+        }).map(function(s){return{id:s.id,branch:s.branch,shift:s.shift,date:fmtDateISO(s.date),enrolled:s.enrolled||[]};});
+      }).catch(function(){return[];});
+    }));
+    allPeriodsShifts=results.reduce(function(a,b){return a.concat(b);},[]);
+  }catch(e){allPeriodsShifts=[];}
 }
 
 function renderMisTurnos(){
@@ -1934,6 +1956,19 @@ function refreshTimers(){
   });
 }
 
+// Sync inscription to inscritos sheet (master attendance sheet) with 1 retry
+function syncInscritos(monthKey,shiftId,rut){
+  apiCall({action:'updateAttendance',monthKey,shiftId,rut,asistio:'',pago:''})
+    .then(function(r){if(!r||!r.ok)console.warn('syncInscritos failed, retrying...',r);})
+    .catch(function(){
+      // Retry once after 3 seconds
+      setTimeout(function(){
+        apiCall({action:'updateAttendance',monthKey,shiftId,rut,asistio:'',pago:''})
+          .catch(function(e){console.error('syncInscritos retry failed:',e);});
+      },3000);
+    });
+}
+
 async function enroll(id){
   const s=shifts.find(x=>x.id===id);
   if(!s){showToast('Turno no encontrado','err');return;}
@@ -1955,8 +1990,11 @@ async function enroll(id){
     s.enrolled.push({rut:myRut,name:myName,enrolledAt:Date.now()});
     const res=await apiCall({action:'saveShift',shift:s,monthKey:currentMonthKey});
     if(res&&res.ok){
-      // Sync to inscritos sheet for attendance app (fire-and-forget)
-      apiCall({action:'updateAttendance',monthKey:currentMonthKey,shiftId:s.id,rut:myRut,asistio:'',pago:''}).catch(()=>{});
+      // Sync to inscritos sheet master
+      syncInscritos(currentMonthKey,s.id,myRut);
+      // Update cross-period cache so conflict detection is immediately accurate
+      allPeriodsShifts=allPeriodsShifts.filter(x=>x.id!==s.id);
+      allPeriodsShifts.push({id:s.id,branch:s.branch,shift:s.shift,date:fmtDateISO(s.date),enrolled:s.enrolled});
       renderWorker();
       const v=Math.max(0,s.limit-s.enrolled.length);
       const myE2=s.enrolled.find(e=>e.rut===myRut);
@@ -1996,6 +2034,9 @@ async function unenroll(id){
   try{
     const res=await apiCall({action:'saveShift',shift:s,monthKey:currentMonthKey});
     if(res&&res.ok){
+      // Update cross-period cache
+      allPeriodsShifts=allPeriodsShifts.filter(x=>x.id!==s.id);
+      allPeriodsShifts.push({id:s.id,branch:s.branch,shift:s.shift,date:fmtDateISO(s.date),enrolled:s.enrolled});
       renderWorker();
       showModal('cancel','Inscripción cancelada',
         `Tu inscripción al turno <strong>${s.shift}</strong> del <strong>${fmtDate(s.date)}</strong> en <strong>${s.branch}</strong> ha sido cancelada.<br><br>
@@ -2383,7 +2424,7 @@ async function adminEnroll(){
     const res=await apiCall({action:'saveShift',shift:s,monthKey:currentMonthKey});
     if(res&&res.ok){
       // Sync to inscritos sheet for attendance app (fire-and-forget)
-      apiCall({action:'updateAttendance',monthKey:currentMonthKey,shiftId:s.id,rut:fRut,asistio:'',pago:''}).catch(()=>{});
+      syncInscritos(currentMonthKey,s.id,fRut);
       renderAdmin();populateAdminSel();
       document.getElementById('adm-inp-name').value='';
       document.getElementById('adm-inp-rut').value='';
