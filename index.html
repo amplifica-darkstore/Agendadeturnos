@@ -1218,9 +1218,66 @@ function clearPersonSearch() {
   if (res) res.innerHTML = '';
 }
 
-function searchPersonAdmin() {
-  const q = (document.getElementById('adm-person-search') || {}).value || '';
-  buildPersonResult(q.trim(), document.getElementById('adm-person-result'));
+async function searchPersonAdmin() {
+  const q = ((document.getElementById('adm-person-search') || {}).value || '').trim();
+  const container = document.getElementById('adm-person-result');
+  if (!container) return;
+  if (!q || q.length < 2) { container.innerHTML = ''; return; }
+  container.innerHTML = '<div style="font-size:12px;color:#64748B;padding:6px 0"><i class="ti ti-loader" style="margin-right:4px"></i>Buscando en todos los períodos...</div>';
+  const qLow = q.toLowerCase();
+  const allMatches = []; // {shift, person, periodLabel}
+  for (const def of MONTH_DEFS) {
+    try {
+      const res = await apiCall({action:'getShifts', monthKey:def.key});
+      if (!res || !res.shifts) continue;
+      res.shifts.forEach(function(s) {
+        (s.enrolled || []).forEach(function(e) {
+          if (e.name.toLowerCase().includes(qLow) || (e.rut||'').toLowerCase().includes(qLow)) {
+            allMatches.push({
+              shift: Object.assign({}, s, {date: fmtDateISO(s.date)}),
+              person: e,
+              periodLabel: def.label
+            });
+          }
+        });
+      });
+    } catch(e) {}
+  }
+  if (!allMatches.length) {
+    container.innerHTML = '<div style="font-size:12px;color:#64748B;padding:6px 0">Sin resultados para "' + q + '" en ningún período</div>';
+    return;
+  }
+  // Group by rut
+  const byPerson = {};
+  allMatches.forEach(function(item) {
+    const key = item.person.rut;
+    if (!byPerson[key]) byPerson[key] = { name: item.person.name, rut: item.person.rut, entries: [] };
+    byPerson[key].entries.push(item);
+  });
+  const SHIFT_COLORS = { AM:'#059669', PM:'#D97706', Nocturno:'#7C3AED', 'Estándar':'#185FA5' };
+  let html = '';
+  Object.values(byPerson).forEach(function(p) {
+    p.entries.sort(function(a,b){ return a.shift.date > b.shift.date ? 1 : -1; });
+    html += '<div style="background:#F8FAFC;border-radius:10px;padding:12px 14px;margin-bottom:10px;border:1px solid #E2E8F0">';
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">';
+    html += '<div style="background:#1a1a6e;color:white;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0">' + (p.name.trim()[0]||'?').toUpperCase() + '</div>';
+    html += '<div><div style="font-size:13px;font-weight:700;color:#1E293B">' + p.name + '</div>';
+    html += '<div style="font-size:11px;color:#64748B;font-family:monospace">' + p.rut + '</div></div>';
+    html += '<div style="margin-left:auto;background:#1a1a6e;color:white;border-radius:99px;padding:3px 10px;font-size:11px;font-weight:700">' + p.entries.length + ' turno' + (p.entries.length > 1 ? 's' : '') + '</div>';
+    html += '</div><div style="display:flex;flex-direction:column;gap:5px">';
+    p.entries.forEach(function(item) {
+      const s = item.shift;
+      const color = SHIFT_COLORS[s.shift] || '#64748B';
+      html += '<div style="display:flex;align-items:center;gap:8px;background:white;border-radius:8px;padding:7px 10px;border:1px solid #E2E8F0">';
+      html += '<span style="background:' + color + ';color:white;border-radius:5px;padding:2px 8px;font-size:11px;font-weight:700;flex-shrink:0">' + s.shift + '</span>';
+      html += '<span style="font-size:12px;font-weight:600;color:#1E293B;flex-shrink:0">' + fmtDate(s.date) + '</span>';
+      html += '<span style="font-size:11px;color:#94A3B8;flex-shrink:0">' + item.periodLabel + '</span>';
+      html += '<span style="font-size:11px;color:#475569;margin-left:auto"><i class="ti ti-building-store" style="font-size:11px;margin-right:3px"></i>' + s.branch + '</span>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+  });
+  container.innerHTML = html;
 }
 
 function clearPersonSearchAdmin() {
