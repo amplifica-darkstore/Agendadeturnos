@@ -576,6 +576,7 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
               <div class="form-row" style="margin:0"><label style="font-size:10px">Hasta</label><input type="date" id="close-to" style="padding:5px 8px;border:1.5px solid #86EFAC;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;width:100%;box-sizing:border-box"></div>
             </div>
             <button class="btn" style="background:#166534;color:white;width:100%;font-size:12px;padding:8px" onclick="closePeriodVacantes()"><i class="ti ti-lock" style="margin-right:4px"></i>Cerrar vacantes del rango</button>
+            <button class="btn" style="background:#DC2626;color:white;width:100%;font-size:13px;padding:10px;margin-top:8px;font-weight:700" onclick="closeAllVacantesNow()"><i class="ti ti-alert-triangle" style="margin-right:5px"></i>⚡ Cerrar TODO a 0 AHORA</button>
             <div id="batch-status" style="font-size:12px;color:#166534;margin-top:6px;display:none"></div>
           </div>
           <hr style="border:none;border-top:1px solid #E2E8F0;margin-bottom:14px">
@@ -1616,18 +1617,13 @@ async function loadShifts(){
           horario:getHorario(s)
         };
       });
-      // Deduplicate by branch|shift|date — keep the one with most vacantes available
+      // Deduplicate by branch|shift|date — keep the one with most enrolled (the real original)
       const byKey={};
       valid.forEach(function(s){
         const key=s.branch+'|'+s.shift+'|'+s.date;
-        const vac=Math.max(0,s.limit-s.enrolled.length);
         const existing=byKey[key];
         if(!existing){byKey[key]=s;return;}
-        const existingVac=Math.max(0,existing.limit-existing.enrolled.length);
-        // Prefer the shift with more vacantes; on tie prefer more enrolled (more "official")
-        if(vac>existingVac||(vac===existingVac&&s.enrolled.length>existing.enrolled.length)){
-          byKey[key]=s;
-        }
+        if(s.enrolled.length>existing.enrolled.length){byKey[key]=s;}
       });
       shifts=Object.values(byKey);
     }
@@ -1854,7 +1850,13 @@ function shiftCardCompact(s){
 function tLeft(enrolledAt, shiftDateISO){
   if(!shiftDateISO) return -1;
   const shiftMs=new Date(shiftDateISO+'T00:00:00').getTime();
-  return shiftMs - CANCEL_HOURS*3600*1000 - Date.now();
+  const window48h=shiftMs - CANCEL_HOURS*3600*1000 - Date.now();
+  // Grace period: always allow 1h after enrollment even if 48h window passed
+  if(enrolledAt){
+    const sinceEnroll=Date.now()-Number(enrolledAt);
+    if(sinceEnroll<3600*1000) return Math.max(window48h, 3600*1000-sinceEnroll);
+  }
+  return window48h;
 }
 
 function shiftCard(s){
@@ -2137,6 +2139,27 @@ async function createStandardShifts(){
   status.textContent=`✓ ${created} turnos creados${errors?' ('+errors+' errores)':''}.`;
   showToast(`${created} turnos estándar creados`,'ok');
   setTimeout(()=>{status.style.display='none';},5000);
+}
+
+async function closeAllVacantesNow(){
+  if(!confirm('¿Cerrar TODOS los turnos del período a 0 vacantes?'))return;
+  const status=document.getElementById('batch-status');
+  status.style.display='block';status.textContent='⏳ Cargando turnos...';
+  await loadShifts();
+  let updated=0,errors=0;
+  for(const s of shifts){
+    if(s.limit===0)continue;
+    const old=s.limit;s.limit=0;
+    try{
+      const res=await apiCall({action:'saveShift',shift:s,monthKey:currentMonthKey});
+      if(res&&res.ok)updated++;else{s.limit=old;errors++;}
+    }catch(e){s.limit=old;errors++;}
+    status.textContent=`⏳ Cerrando... ${updated} turnos`;
+  }
+  renderAdmin();populateAdminSel();
+  status.textContent=`✓ ${updated} turnos cerrados a 0${errors?' — '+errors+' errores':''}`;
+  showToast(`✓ ${updated} turnos cerrados a 0`,'ok');
+  setTimeout(()=>{status.style.display='none';},8000);
 }
 
 async function closePeriodVacantes(){
