@@ -1300,8 +1300,32 @@ function openAdminPage(){
   document.getElementById('tab-admin').classList.add('active');
   document.getElementById('tab-worker').classList.remove('active');
   document.getElementById('tab-overview').style.display='flex';
-  document.getElementById('topbar-actions').innerHTML=`<span class="adm-badge"><i class="ti ti-shield-check" style="font-size:12px"></i>${myName}</span>`;
+  renderAdminTopbarActions();
   loadAndRenderAdmin();
+}
+
+function renderAdminTopbarActions(){
+  const opts=MONTH_DEFS.map(function(m){
+    return`<option value="${m.key}"${m.key===currentMonthKey?' selected':''}>${m.label}</option>`;
+  }).join('');
+  document.getElementById('topbar-actions').innerHTML=`
+    <span class="adm-badge"><i class="ti ti-shield-check" style="font-size:12px"></i>${myName}</span>
+    <select id="topbar-period-sel" onchange="switchAdminPeriod(this.value)"
+      style="padding:5px 10px;border-radius:99px;font-size:12px;font-weight:700;background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.4);font-family:'DM Sans',sans-serif;cursor:pointer">
+      ${opts}
+    </select>`;
+}
+
+function switchAdminPeriod(key){
+  currentMonthKey=key;
+  currentMonthDef=MONTH_DEFS.find(function(m){return m.key===key;})||MONTH_DEFS[0];
+  try{localStorage.setItem('amp_period',key);}catch(e){}
+  const el=document.getElementById('topbar-period-title');
+  if(el)el.textContent=currentMonthDef.label;
+  populateDates();populateWeekFilters();populateStdFrom();
+  loadAndRenderAdmin();
+  const ov=document.getElementById('tab-overview');
+  if(ov&&ov.style.display!=='none')renderOverview();
 }
 
 function toggleHorarioBar() {
@@ -1762,6 +1786,7 @@ async function loadAndRenderAdmin(){
   await loadShifts();
   document.getElementById('loading-admin').style.display='none';
   document.getElementById('admin-content').style.display='block';
+  populateWeekFilters();populateStdFrom();
   renderAdmin();populateAdminSel();checkDuplicate();
   loadBlockedRuts().then(renderBlockedList).catch(function(){});
 }
