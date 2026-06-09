@@ -495,6 +495,7 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
     </div>
     <div style="background:white;border-radius:14px;border:1px solid #E2E8F0;padding:14px 16px;margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
       <i class="ti ti-filter" style="color:#185FA5;font-size:16px"></i>
+      <select id="ov-period" onchange="switchPeriodFromFilter(this.value,'overview')" style="padding:7px 10px;border:1.5px solid #185FA5;border-radius:10px;font-size:12px;background:#EFF6FF;color:#1E40AF;font-family:'DM Sans',sans-serif;font-weight:700"></select>
       <select id="ov-branch" onchange="renderOverview()" style="padding:7px 10px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:12px;background:white;color:#1E293B;font-family:'DM Sans',sans-serif;font-weight:500">
         <option value="">Todas las sucursales</option>
         <option>Quilicura</option>
@@ -504,15 +505,10 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
       </select>
       <select id="ov-shift" onchange="renderOverview()" style="padding:7px 10px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:12px;background:white;color:#1E293B;font-family:'DM Sans',sans-serif;font-weight:500">
         <option value="">Todos los turnos</option>
-        <option>AM</option>
-        <option>PM</option>
-        <option>Nocturno</option>
+        <option>AM</option><option>PM</option><option>Nocturno</option><option>Estándar</option>
       </select>
       <select id="ov-week" onchange="renderOverview()" style="padding:7px 10px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:12px;background:white;color:#1E293B;font-family:'DM Sans',sans-serif;font-weight:500">
         <option value="">Todas las semanas</option>
-        <option value="1">Semana 1 — 25 al 31 mayo</option>
-        <option value="2">Semana 2 — 1 al 7 junio</option>
-        <option value="3">Semana 3 — 8 al 12 junio</option>
       </select>
       <label style="display:inline-flex;align-items:center;gap:6px;padding:7px 11px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;color:#1E293B;background:white;cursor:pointer;user-select:none">
         <input type="checkbox" id="ov-only-available" onchange="renderOverview()" style="accent-color:#1a1a6e;width:13px;height:13px;cursor:pointer">
@@ -580,6 +576,7 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
           </div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;padding:10px 12px;background:#F8FAFC;border-radius:10px;border:1px solid #E2E8F0;align-items:center">
             <i class="ti ti-filter" style="color:#185FA5;font-size:14px"></i>
+            <select id="adm-filter-period" onchange="switchPeriodFromFilter(this.value,'admin')" style="padding:5px 9px;border:1.5px solid #185FA5;border-radius:8px;font-size:12px;background:#EFF6FF;color:#1E40AF;font-family:'DM Sans',sans-serif;font-weight:700"></select>
             <select id="adm-filter-branch" onchange="renderAdmin()" style="padding:5px 9px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:12px;background:white;font-family:'DM Sans',sans-serif">
               <option value="">Todas las sucursales</option><option>Quilicura</option><option>Santiago Centro</option><option>Lo Barnechea</option><option>La Reina</option>
             </select>
@@ -1317,15 +1314,33 @@ function renderAdminTopbarActions(){
 }
 
 function switchAdminPeriod(key){
+  switchPeriodFromFilter(key,'admin');
+}
+
+function switchPeriodFromFilter(key, from){
   currentMonthKey=key;
   currentMonthDef=MONTH_DEFS.find(function(m){return m.key===key;})||MONTH_DEFS[0];
   try{localStorage.setItem('amp_period',key);}catch(e){}
   const el=document.getElementById('topbar-period-title');
   if(el)el.textContent=currentMonthDef.label;
+  // Sync all period selectors
+  ['topbar-period-sel','ov-period','adm-filter-period'].forEach(function(id){
+    const sel=document.getElementById(id);if(sel)sel.value=key;
+  });
   populateDates();populateWeekFilters();populateStdFrom();
-  loadAndRenderAdmin();
-  const ov=document.getElementById('tab-overview');
-  if(ov&&ov.style.display!=='none')renderOverview();
+  if(from==='admin'||from==='topbar'){loadAndRenderAdmin();}
+  if(from==='overview'||document.getElementById('page-overview').classList.contains('active')){
+    loadShifts().then(renderOverview);
+  }
+}
+
+function populatePeriodSelects(){
+  const opts=MONTH_DEFS.map(function(m){
+    return'<option value="'+m.key+'"'+(m.key===currentMonthKey?' selected':'')+'>'+m.label+'</option>';
+  }).join('');
+  ['topbar-period-sel','ov-period','adm-filter-period'].forEach(function(id){
+    const sel=document.getElementById(id);if(sel)sel.innerHTML=opts;
+  });
 }
 
 function toggleHorarioBar() {
@@ -2194,6 +2209,7 @@ function populateWeekFilters(){
     sel.innerHTML=isCyber?cyberOpts:stdOpts;
   });
   updateHorarioTopbar();
+  populatePeriodSelects();
 }
 function checkDuplicate(){
   const branch=document.getElementById('a-branch').value,shift=document.getElementById('a-shift').value,date=document.getElementById('a-date').value;
