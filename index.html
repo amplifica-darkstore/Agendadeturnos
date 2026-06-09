@@ -2096,11 +2096,14 @@ function populateStdFrom(){
   });
 }
 
+let _creatingStdShifts=false;
 async function createStandardShifts(){
+  if(_creatingStdShifts){showToast('Ya está creando turnos, espera...','err');return;}
+  _creatingStdShifts=true;
   const fromVal=document.getElementById('std-from').value;
   const limit=parseInt(document.getElementById('std-limit').value)||6;
   const status=document.getElementById('std-status');
-  if(!fromVal){showToast('Selecciona la semana de inicio','err');return;}
+  if(!fromVal){_creatingStdShifts=false;showToast('Selecciona la semana de inicio','err');return;}
   const def=currentMonthDef||MONTH_DEFS[0];
   const periodEnd=new Date(def.dateTo+'T12:00:00');
   const branches=['Quilicura','Santiago Centro','Lo Barnechea','La Reina'];
@@ -2129,12 +2132,14 @@ async function createStandardShifts(){
   let created=0,errors=0;
   for(const t of toCreate){
     try{
-      const id='std-'+t.branch.replace(/\s/g,'')+'-'+t.date+'-'+Date.now();
+      // Deterministic ID: same branch+date always = same ID, prevents duplicates on double-click
+      const id='std-'+t.branch.replace(/\s+/g,'').toLowerCase()+'-'+t.date;
       const shift={id,branch:t.branch,shift:'Estándar',date:t.date,limit,enrolled:[],horario:STANDARD_HORARIO[t.branch]||''};
       const res=await apiCall({action:'saveShift',shift:shift,monthKey:currentMonthKey});
       if(res&&res.ok)created++;else errors++;
     }catch(e){errors++;}
   }
+  _creatingStdShifts=false;
   await loadShifts();renderAdmin();populateAdminSel();
   status.textContent=`✓ ${created} turnos creados${errors?' ('+errors+' errores)':''}.`;
   showToast(`${created} turnos estándar creados`,'ok');
@@ -2221,7 +2226,8 @@ async function createShift(){
     }
     btn.innerHTML='<i class="ti ti-loader" style="margin-right:5px"></i>Guardando...';
     status.textContent='⏳ Guardando turno...';
-    const id=currentMonthKey.replace(/-/g,'')+'_'+Date.now();
+    // Deterministic ID: branch+shift+date ensures no duplicate rows in Sheets
+    const id=currentMonthKey.replace(/-/g,'')+'_'+branch.replace(/\s+/g,'').toLowerCase()+'_'+shift.toLowerCase()+'_'+isoDate;
     const s={id,branch,shift,date:isoDate,limit,enrolled:[]};
     const res=await apiCall({action:'saveShift',shift:s,monthKey:currentMonthKey});
     if(res&&res.ok){
