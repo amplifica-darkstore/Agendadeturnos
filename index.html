@@ -1750,7 +1750,7 @@ async function enroll(id){
   if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader" style="margin-right:4px"></i>Inscribiendo...';}
   try{
     s.enrolled.push({rut:myRut,name:myName,enrolledAt:Date.now()});
-    const res=await apiCall({action:'saveShift',shift:s});
+    const res=await apiCall({action:'saveShift',shift:s,monthKey:currentMonthKey});
     if(res&&res.ok){
       renderWorker();
       const v=Math.max(0,s.limit-s.enrolled.length);
@@ -1783,7 +1783,7 @@ async function unenroll(id){
   const backup=[...s.enrolled];
   s.enrolled=s.enrolled.filter(e=>e.rut!==myRut);
   try{
-    const res=await apiCall({action:'saveShift',shift:s});
+    const res=await apiCall({action:'saveShift',shift:s,monthKey:currentMonthKey});
     if(res&&res.ok){
       renderWorker();
       showModal('cancel','Inscripción cancelada',
@@ -2048,7 +2048,7 @@ async function adminDelPerson(shiftId,rut){
   const s=shifts.find(x=>x.id===shiftId);if(!s)return;
   s.enrolled=(s.enrolled||[]).filter(e=>e.rut!==rut);
   try{
-    const res=await apiCall({action:'saveShift',shift:s});
+    const res=await apiCall({action:'saveShift',shift:s,monthKey:currentMonthKey});
     if(res&&res.ok){
       renderAdmin();populateAdminSel();
       showToast('Persona eliminada del turno','info');
@@ -2072,7 +2072,7 @@ async function adminEnroll(){
   if(s.enrolled.length>=s.limit){showToast('Turno completo. Aumenta las vacantes primero.','err');return;}
   s.enrolled.push({rut:fRut,name,enrolledAt:0});
   try{
-    const res=await apiCall({action:'saveShift',shift:s});
+    const res=await apiCall({action:'saveShift',shift:s,monthKey:currentMonthKey});
     if(res&&res.ok){
       renderAdmin();populateAdminSel();
       document.getElementById('adm-inp-name').value='';
@@ -2291,7 +2291,7 @@ async function cancelFutureShifts(rut){
     const idx=(s.enrolled||[]).findIndex(function(e){return e.rut===rut;});
     if(idx>=0){
       s.enrolled.splice(idx,1);
-      try{await apiCall({action:'saveShift',shift:s});}catch(e){}
+      try{await apiCall({action:'saveShift',shift:s,monthKey:currentMonthKey});}catch(e){}
       cancelled++;
     }
   }
@@ -2504,7 +2504,7 @@ async function saveEditVacantes(id){
   const oldLimit=s.limit;
   s.limit=newLimit;
   try{
-    const res=await apiCall({action:'saveShift',shift:s});
+    const res=await apiCall({action:'saveShift',shift:s,monthKey:currentMonthKey});
     if(res&&res.ok){
       renderAdmin();populateAdminSel();
       showToast(`Vacantes actualizadas a ${newLimit} correctamente`,'ok');
