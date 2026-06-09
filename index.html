@@ -213,10 +213,11 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
         </div>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <div id="topbar-actions"></div>
-          <div class="tabs">
+          <div class="tabs" style="display:flex;align-items:center;gap:6px">
             <button class="tab" id="tab-worker" onclick="goTab('worker',event)" style="display:none"><i class="ti ti-hard-hat" style="font-size:13px;margin-right:4px"></i>Turnos</button>
             <button class="tab" id="tab-history" onclick="goTab('history',event)" style="display:none"><i class="ti ti-history" style="font-size:13px;margin-right:4px"></i>Mi historial</button>
             <button class="tab active" id="tab-admin" onclick="goTab('admin',event)" style="display:none"><i class="ti ti-settings" style="font-size:13px;margin-right:4px"></i>Admin</button>
+            <div id="topbar-period-dropdown" style="display:none"></div>
             <button class="tab" id="tab-overview" onclick="goTab('overview',event)" style="display:none"><i class="ti ti-table" style="font-size:13px;margin-right:4px"></i>Resumen</button>
           </div>
         </div>
@@ -781,6 +782,12 @@ function getHorario(s) {
 }
 const SHIFT_CARD={AM:'shift-card-am',PM:'shift-card-pm',Nocturno:'shift-card-noc',Estándar:'shift-card-std'};
 const SHIFT_BADGE={AM:'b-am',PM:'b-pm',Nocturno:'b-noc','Estándar':'b-std'};
+const BRANCH_COLORS={
+  'Quilicura':       {bg:'#EFF6FF',border:'#3B82F6',text:'#1D4ED8',dot:'#3B82F6'},
+  'Santiago Centro': {bg:'#FDF4FF',border:'#A855F7',text:'#7E22CE',dot:'#A855F7'},
+  'Lo Barnechea':    {bg:'#FFF7ED',border:'#F97316',text:'#C2410C',dot:'#F97316'},
+  'La Reina':        {bg:'#F0FDF4',border:'#22C55E',text:'#15803D',dot:'#22C55E'},
+};
 const DAYS=['dom','lun','mar','mié','jue','vie','sáb'];
 const MONTHS=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 const CANCEL_HOURS=48; // horas antes del turno para poder cancelar
@@ -1361,10 +1368,43 @@ function openWorkerPage(){
   document.getElementById('tab-history').style.display='flex';
   document.getElementById('tab-admin').style.display='none';
   document.getElementById('tab-overview').style.display='none';
+  const tpd=document.getElementById('topbar-period-dropdown');if(tpd){tpd.style.display='none';tpd.innerHTML='';}
   document.getElementById('topbar-actions').innerHTML='';
   document.getElementById('w-name-display').textContent=myName;
   document.getElementById('w-rut-display').textContent=myRut;
   document.getElementById('w-avatar').textContent=initials(myName);
+  loadAndRenderWorker();
+}
+
+let _previewingWorker=false;
+function previewWorkerView(){
+  if(_previewingWorker){
+    // Return to admin view
+    _previewingWorker=false;
+    openAdminPage();
+    return;
+  }
+  _previewingWorker=true;
+  allPages('page-worker');
+  // Keep admin tab visible + add "exit preview" button
+  document.getElementById('tab-worker').style.display='flex';
+  document.getElementById('tab-worker').classList.add('active');
+  document.getElementById('tab-history').style.display='flex';
+  document.getElementById('tab-admin').style.display='flex';
+  document.getElementById('tab-admin').classList.remove('active');
+  document.getElementById('tab-overview').style.display='none';
+  const tpd=document.getElementById('topbar-period-dropdown');if(tpd){tpd.style.display='none';tpd.innerHTML='';}
+  document.getElementById('topbar-actions').innerHTML=`
+    <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:12px;font-weight:700;background:#F5C800;color:#1a1a6e;border:none">
+      <i class="ti ti-shield-check" style="font-size:12px"></i>${myName}
+    </span>
+    <button onclick="previewWorkerView()"
+      style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(245,200,0,0.25);color:#F5C800;border:1px solid rgba(245,200,0,0.5);cursor:pointer;font-family:inherit">
+      <i class="ti ti-arrow-left" style="font-size:12px"></i>Volver a Admin
+    </button>`;
+  document.getElementById('w-name-display').textContent='(vista previa)';
+  document.getElementById('w-rut-display').textContent='';
+  document.getElementById('w-avatar').textContent='👁';
   loadAndRenderWorker();
 }
 
@@ -1385,12 +1425,24 @@ function renderAdminTopbarActions(){
   const opts=MONTH_DEFS.map(function(m){
     return`<option value="${m.key}"${m.key===currentMonthKey?' selected':''}>${m.label}</option>`;
   }).join('');
+  // Name badge + preview button in topbar-actions
   document.getElementById('topbar-actions').innerHTML=`
-    <span class="adm-badge"><i class="ti ti-shield-check" style="font-size:12px"></i>${myName}</span>
-    <select id="topbar-period-sel" onchange="switchAdminPeriod(this.value)"
+    <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:12px;font-weight:700;background:#F5C800;color:#1a1a6e;border:none;letter-spacing:0.01em">
+      <i class="ti ti-shield-check" style="font-size:12px"></i>${myName}
+    </span>
+    <button onclick="previewWorkerView()" title="Ver como trabajador"
+      style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:99px;font-size:11px;font-weight:600;background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.35);cursor:pointer;font-family:inherit">
+      <i class="ti ti-eye" style="font-size:12px"></i>Vista trabajador
+    </button>`;
+  // Period dropdown between Admin and Resumen tabs
+  const dd=document.getElementById('topbar-period-dropdown');
+  if(dd){
+    dd.style.display='block';
+    dd.innerHTML=`<select id="topbar-period-sel" onchange="switchAdminPeriod(this.value)"
       style="padding:5px 10px;border-radius:99px;font-size:12px;font-weight:700;background:rgba(255,255,255,0.15);color:white;border:1px solid rgba(255,255,255,0.4);font-family:'DM Sans',sans-serif;cursor:pointer">
       ${opts}
     </select>`;
+  }
 }
 
 function switchAdminPeriod(key){
@@ -1520,6 +1572,7 @@ function logout(){
   document.getElementById('form-worker').style.display='none';document.getElementById('form-admin').style.display='none';
   document.getElementById('btn-role-worker').classList.remove('selected');document.getElementById('btn-role-admin').classList.remove('selected');
   document.getElementById('topbar-actions').innerHTML='';
+  const tpd=document.getElementById('topbar-period-dropdown');if(tpd){tpd.style.display='none';tpd.innerHTML='';}
   ['tab-worker','tab-history','tab-admin','tab-overview'].forEach(function(id){
     const el=document.getElementById(id);
     if(el){el.style.display='none';el.classList.remove('active');}
@@ -1963,7 +2016,8 @@ function renderAdmin(){
   r.innerHTML=filteredShifts.map(s=>{
     const en=s.enrolled||[],vac=Math.max(0,s.limit-en.length),pct=s.limit>0?Math.round((en.length/s.limit)*100):0,fc=pct>=100?'full':pct>=60?'warn':'';
     const vcol=vac===0?'#EF4444':vac<=2?'#F59E0B':'#059669';
-    return `<div class="roster-item"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px"><div><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span class="badge ${SHIFT_BADGE[s.shift]}">${s.shift}</span><span style="font-size:13px;font-weight:700;color:#1E293B">${fmtDate(s.date)}</span></div><div style="font-size:11px;color:#64748B;margin-top:4px;font-weight:500">${s.branch}</div></div><div style="display:flex;align-items:center;gap:10px"><div style="text-align:right"><div style="font-size:20px;font-weight:800;color:${vcol}">${vac}</div><div style="font-size:10px;color:#94A3B8;text-transform:uppercase;font-weight:600">vacantes</div></div><button onclick="toggleEditVacantes('${s.id}')" style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;cursor:pointer;color:#1E40AF;padding:7px 9px" title="Editar vacantes"><i class="ti ti-edit" style="font-size:14px"></i></button><button onclick="adminDelShift('${s.id}')" style="background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;cursor:pointer;color:#EF4444;padding:7px 9px" title="Eliminar turno"><i class="ti ti-trash" style="font-size:14px"></i></button></div></div><div id="edit-vacantes-${s.id}" style="display:none;gap:8px;align-items:center;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:8px 12px;margin:8px 0"><span style="font-size:12px;color:#1E40AF;font-weight:600">Nuevas vacantes totales:</span><input type="number" id="edit-limit-${s.id}" value="${s.limit}" min="${en.length}" max="100" style="width:70px;padding:5px 8px;border:1.5px solid #93C5FD;border-radius:8px;font-size:13px;font-family:DM Sans,sans-serif;color:#1E293B"><button onclick="saveEditVacantes('${s.id}')" style="background:#185FA5;color:white;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:DM Sans,sans-serif">Guardar</button><button onclick="cancelEditVacantes('${s.id}')" style="background:white;color:#64748B;border:1px solid #E2E8F0;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;font-family:DM Sans,sans-serif">Cancelar</button></div><div class="progress-bar"><div class="pf ${fc}" style="width:${Math.min(pct,100)}%"></div></div><div style="font-size:11px;color:#64748B;font-weight:600;margin-bottom:8px">${en.length} de ${s.limit} inscritos</div><div style="display:flex;flex-wrap:wrap;gap:4px">${en.length?en.map(e=>`<div class="user-tag"><strong style="color:#1E293B">${e.name}</strong><span>${e.rut}</span><button class="btn-remove" onclick="adminDelPerson('${s.id}','${e.rut}')"><i class="ti ti-x" style="font-size:10px;margin-right:2px"></i>Eliminar</button></div>`).join(''):'<span style="font-size:11px;color:#94A3B8">Sin inscritos aún</span>'}</div></div>`;
+    const bc=BRANCH_COLORS[s.branch]||{bg:'#F8FAFC',border:'#E2E8F0',text:'#475569',dot:'#94A3B8'};
+    return `<div class="roster-item" style="border-left:4px solid ${bc.border};background:${bc.bg}"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px"><div><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:4px"><span style="display:inline-flex;align-items:center;gap:5px;background:${bc.border};color:white;border-radius:8px;padding:3px 10px;font-size:13px;font-weight:700"><i class="ti ti-building-store" style="font-size:12px"></i>${s.branch}</span></div><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span class="badge ${SHIFT_BADGE[s.shift]}">${s.shift}</span><span style="font-size:13px;font-weight:700;color:#1E293B">${fmtDate(s.date)}</span></div></div><div style="display:flex;align-items:center;gap:10px"><div style="text-align:right"><div style="font-size:20px;font-weight:800;color:${vcol}">${vac}</div><div style="font-size:10px;color:#94A3B8;text-transform:uppercase;font-weight:600">vacantes</div></div><button onclick="toggleEditVacantes('${s.id}')" style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;cursor:pointer;color:#1E40AF;padding:7px 9px" title="Editar vacantes"><i class="ti ti-edit" style="font-size:14px"></i></button><button onclick="adminDelShift('${s.id}')" style="background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;cursor:pointer;color:#EF4444;padding:7px 9px" title="Eliminar turno"><i class="ti ti-trash" style="font-size:14px"></i></button></div></div><div id="edit-vacantes-${s.id}" style="display:none;gap:8px;align-items:center;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:8px 12px;margin:8px 0"><span style="font-size:12px;color:#1E40AF;font-weight:600">Nuevas vacantes totales:</span><input type="number" id="edit-limit-${s.id}" value="${s.limit}" min="${en.length}" max="100" style="width:70px;padding:5px 8px;border:1.5px solid #93C5FD;border-radius:8px;font-size:13px;font-family:DM Sans,sans-serif;color:#1E293B"><button onclick="saveEditVacantes('${s.id}')" style="background:#185FA5;color:white;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:DM Sans,sans-serif">Guardar</button><button onclick="cancelEditVacantes('${s.id}')" style="background:white;color:#64748B;border:1px solid #E2E8F0;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;font-family:DM Sans,sans-serif">Cancelar</button></div><div class="progress-bar"><div class="pf ${fc}" style="width:${Math.min(pct,100)}%"></div></div><div style="font-size:11px;color:#64748B;font-weight:600;margin-bottom:8px">${en.length} de ${s.limit} inscritos</div><div style="display:flex;flex-wrap:wrap;gap:4px">${en.length?en.map(e=>`<div class="user-tag"><strong style="color:#1E293B">${e.name}</strong><span>${e.rut}</span><button class="btn-remove" onclick="adminDelPerson('${s.id}','${e.rut}')"><i class="ti ti-x" style="font-size:10px;margin-right:2px"></i>Eliminar</button></div>`).join(''):'<span style="font-size:11px;color:#94A3B8">Sin inscritos aún</span>'}</div></div>`;
   }).join('');
 }
 
