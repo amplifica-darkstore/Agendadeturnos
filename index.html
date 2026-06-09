@@ -842,6 +842,20 @@ async function apiCall(body){
 
 const MONTHS_FULL=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 const DAYS_FULL=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+// Returns true if the shift start time + 2h grace has already passed
+function isShiftClosed(s){
+  const sd=parseDate(s.date);
+  if(!sd)return false;
+  const hor=s.horario||getHorario(s)||'';
+  // Parse start time from "HH:MM - HH:MM"
+  const m=hor.match(/^(\d{1,2}):(\d{2})/);
+  const startH=m?parseInt(m[1]):8;
+  const startM=m?parseInt(m[2]):0;
+  const cutoff=new Date(sd);
+  cutoff.setHours(startH+2,startM,0,0);
+  return new Date()>cutoff;
+}
+
 function parseDate(str){
   if(!str||str==='undefined'||str==='?')return null;
   const s=String(str).trim();
@@ -1802,11 +1816,14 @@ function shiftCardCompact(s){
   const bc=BRANCH_COLORS[s.branch]||{bg:'#F8FAFC',border:'#E2E8F0',text:'#475569',dot:'#94A3B8'};
   const CARD_BG={AM:'linear-gradient(135deg,#F0FDF4,#DCFCE7)',PM:'linear-gradient(135deg,#FFFBEB,#FEF3C7)',Nocturno:'linear-gradient(135deg,#F5F3FF,#EDE9FE)'};
   const CARD_BORDER={AM:'#86EFAC',PM:'#FDE68A',Nocturno:'#C4B5FD'};
+  const shiftClosed=isShiftClosed(s);
   let btn='';
-  if(mine){
+  if(shiftClosed&&!mine){
+    btn=`<button class="btn btn-disabled" style="margin-top:6px;padding:6px 10px;font-size:11px;background:#F1F5F9;color:#94A3B8;border-color:#E2E8F0"><i class="ti ti-lock" style="margin-right:3px"></i>Turno cerrado</button>`;
+  }else if(mine){
     const left=tLeft(myE.enrolledAt,s.date);
-    if(left>0){const hrs=Math.ceil(left/3600000);btn=`<button class="btn btn-enrolled" style="margin-top:6px;padding:6px 10px;font-size:11px" onclick="unenroll('${s.id}')"><i class="ti ti-check" style="margin-right:3px"></i>Inscrito — cancelar</button><div class="timer-badge"><i class="ti ti-clock" style="font-size:10px"></i><span id="timer-${s.id}">Cancela hasta ${hrs}h antes del turno</span></div>`;}
-    else{btn=`<button class="btn btn-locked" style="margin-top:6px;padding:6px 10px;font-size:11px"><i class="ti ti-lock" style="margin-right:3px"></i>Inscrito</button><div class="notice" style="font-size:10px;margin-top:4px">Contacta al admin para cambios.</div>`;}
+    if(left>0&&!shiftClosed){const hrs=Math.ceil(left/3600000);btn=`<button class="btn btn-enrolled" style="margin-top:6px;padding:6px 10px;font-size:11px" onclick="unenroll('${s.id}')"><i class="ti ti-check" style="margin-right:3px"></i>Inscrito — cancelar</button><div class="timer-badge"><i class="ti ti-clock" style="font-size:10px"></i><span id="timer-${s.id}">Cancela hasta ${hrs}h antes del turno</span></div>`;}
+    else{btn=`<button class="btn btn-locked" style="margin-top:6px;padding:6px 10px;font-size:11px"><i class="ti ti-check" style="margin-right:3px"></i>Inscrito</button>`;}
   }else if(conflict){btn=`<button class="btn btn-conflict" style="margin-top:6px;padding:6px 10px;font-size:11px;background:#DC2626;color:white;border-color:#DC2626;opacity:0.9;pointer-events:none;cursor:not-allowed"><i class="ti ti-ban" style="margin-right:3px"></i>${conflictReason}</button>`;}
   else if(full){btn=`<button class="btn btn-disabled" style="margin-top:6px;padding:6px 10px;font-size:11px"><i class="ti ti-lock" style="margin-right:3px"></i>Sin vacantes</button>`;}
   else{btn=`<button class="btn btn-green" style="margin-top:6px;padding:6px 10px;font-size:12px" onclick="enroll('${s.id}')"><i class="ti ti-plus" style="margin-right:3px"></i>Inscribirme</button>`;}
@@ -2024,7 +2041,15 @@ function renderAdmin(){
     const en=s.enrolled||[],vac=Math.max(0,s.limit-en.length),pct=s.limit>0?Math.round((en.length/s.limit)*100):0,fc=pct>=100?'full':pct>=60?'warn':'';
     const vcol=vac===0?'#EF4444':vac<=2?'#F59E0B':'#059669';
     const bc=BRANCH_COLORS[s.branch]||{bg:'#F8FAFC',border:'#E2E8F0',text:'#475569',dot:'#94A3B8'};
-    return `<div class="roster-item" style="border-left:4px solid ${bc.border};background:${bc.bg}"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px"><div><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:4px"><span style="display:inline-flex;align-items:center;gap:5px;background:${bc.border};color:white;border-radius:8px;padding:3px 10px;font-size:13px;font-weight:700"><i class="ti ti-building-store" style="font-size:12px"></i>${s.branch}</span></div><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span class="badge ${SHIFT_BADGE[s.shift]}">${s.shift}</span><span style="font-size:13px;font-weight:700;color:#1E293B">${fmtDate(s.date)}</span></div></div><div style="display:flex;align-items:center;gap:10px"><div style="text-align:right"><div style="font-size:20px;font-weight:800;color:${vcol}">${vac}</div><div style="font-size:10px;color:#94A3B8;text-transform:uppercase;font-weight:600">vacantes</div></div><button onclick="toggleEditVacantes('${s.id}')" style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;cursor:pointer;color:#1E40AF;padding:7px 9px" title="Editar vacantes"><i class="ti ti-edit" style="font-size:14px"></i></button><button onclick="adminDelShift('${s.id}')" style="background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;cursor:pointer;color:#EF4444;padding:7px 9px" title="Eliminar turno"><i class="ti ti-trash" style="font-size:14px"></i></button></div></div><div id="edit-vacantes-${s.id}" style="display:none;gap:8px;align-items:center;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:8px 12px;margin:8px 0"><span style="font-size:12px;color:#1E40AF;font-weight:600">Nuevas vacantes totales:</span><input type="number" id="edit-limit-${s.id}" value="${s.limit}" min="${en.length}" max="100" style="width:70px;padding:5px 8px;border:1.5px solid #93C5FD;border-radius:8px;font-size:13px;font-family:DM Sans,sans-serif;color:#1E293B"><button onclick="saveEditVacantes('${s.id}')" style="background:#185FA5;color:white;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:DM Sans,sans-serif">Guardar</button><button onclick="cancelEditVacantes('${s.id}')" style="background:white;color:#64748B;border:1px solid #E2E8F0;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;font-family:DM Sans,sans-serif">Cancelar</button></div><div class="progress-bar"><div class="pf ${fc}" style="width:${Math.min(pct,100)}%"></div></div><div style="font-size:11px;color:#64748B;font-weight:600;margin-bottom:8px">${en.length} de ${s.limit} inscritos</div><div style="display:flex;flex-wrap:wrap;gap:4px">${en.length?en.map(e=>`<div class="user-tag"><strong style="color:#1E293B">${e.name}</strong><span>${e.rut}</span><button class="btn-remove" onclick="adminDelPerson('${s.id}','${e.rut}')"><i class="ti ti-x" style="font-size:10px;margin-right:2px"></i>Eliminar</button></div>`).join(''):'<span style="font-size:11px;color:#94A3B8">Sin inscritos aún</span>'}</div></div>`;
+    const closed=isShiftClosed(s);
+    const actionBtns=closed
+      ? `<span style="display:inline-flex;align-items:center;gap:5px;background:#64748B;color:white;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:700"><i class="ti ti-lock" style="font-size:12px"></i>Turno cerrado</span>`
+      : `<button onclick="toggleEditVacantes('${s.id}')" style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;cursor:pointer;color:#1E40AF;padding:7px 9px" title="Editar vacantes"><i class="ti ti-edit" style="font-size:14px"></i></button><button onclick="adminDelShift('${s.id}')" style="background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;cursor:pointer;color:#EF4444;padding:7px 9px" title="Eliminar turno"><i class="ti ti-trash" style="font-size:14px"></i></button>`;
+    const enrolledTags=en.length
+      ? en.map(e=>`<div class="user-tag"><strong style="color:#1E293B">${e.name}</strong><span>${e.rut}</span>${closed?'':`<button class="btn-remove" onclick="adminDelPerson('${s.id}','${e.rut}')"><i class="ti ti-x" style="font-size:10px;margin-right:2px"></i>Eliminar</button>`}</div>`).join('')
+      : '<span style="font-size:11px;color:#94A3B8">Sin inscritos aún</span>';
+    const editPanel=closed?'':`<div id="edit-vacantes-${s.id}" style="display:none;gap:8px;align-items:center;background:#EFF6FF;border:1px solid #BFDBFE;border-radius:10px;padding:8px 12px;margin:8px 0"><span style="font-size:12px;color:#1E40AF;font-weight:600">Nuevas vacantes totales:</span><input type="number" id="edit-limit-${s.id}" value="${s.limit}" min="${en.length}" max="100" style="width:70px;padding:5px 8px;border:1.5px solid #93C5FD;border-radius:8px;font-size:13px;font-family:DM Sans,sans-serif;color:#1E293B"><button onclick="saveEditVacantes('${s.id}')" style="background:#185FA5;color:white;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;font-family:DM Sans,sans-serif">Guardar</button><button onclick="cancelEditVacantes('${s.id}')" style="background:white;color:#64748B;border:1px solid #E2E8F0;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer;font-family:DM Sans,sans-serif">Cancelar</button></div>`;
+    return `<div class="roster-item" style="border-left:4px solid ${bc.border};background:${closed?'#F8FAFC':bc.bg};opacity:${closed?'0.85':'1'}"><div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px"><div><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:4px"><span style="display:inline-flex;align-items:center;gap:5px;background:${bc.border};color:white;border-radius:8px;padding:3px 10px;font-size:13px;font-weight:700"><i class="ti ti-building-store" style="font-size:12px"></i>${s.branch}</span></div><div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span class="badge ${SHIFT_BADGE[s.shift]}">${s.shift}</span><span style="font-size:13px;font-weight:700;color:#1E293B">${fmtDate(s.date)}</span></div></div><div style="display:flex;align-items:center;gap:10px"><div style="text-align:right"><div style="font-size:20px;font-weight:800;color:${closed?'#94A3B8':vcol}">${closed?en.length:vac}</div><div style="font-size:10px;color:#94A3B8;text-transform:uppercase;font-weight:600">${closed?'inscritos':'vacantes'}</div></div>${actionBtns}</div></div>${editPanel}<div class="progress-bar"><div class="pf ${fc}" style="width:${Math.min(pct,100)}%"></div></div><div style="font-size:11px;color:#64748B;font-weight:600;margin-bottom:8px">${en.length} de ${s.limit} inscritos</div><div style="display:flex;flex-wrap:wrap;gap:4px">${enrolledTags}</div></div>`;
   }).join('');
 }
 
