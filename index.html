@@ -541,6 +541,19 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
         <div class="stat"><div class="stat-lbl">Total inscritos</div><div class="stat-val" id="s-enrolled">0</div></div>
         <div class="stat"><div class="stat-lbl">Vacantes libres</div><div class="stat-val" id="s-free">0</div></div>
       </div>
+      <!-- Buscador de persona separado -->
+      <div class="card" style="margin-bottom:18px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+          <i class="ti ti-user-search" style="color:#185FA5;font-size:18px"></i>
+          <span class="section-title" style="margin:0">Buscar persona — ver todos sus turnos</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <input type="text" id="adm-person-search" oninput="searchPersonAdmin()" placeholder="Escribe nombre o RUT..." style="flex:1;min-width:200px;padding:9px 13px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:13px;font-family:'DM Sans',sans-serif">
+          <button onclick="clearPersonSearchAdmin()" class="btn btn-outline btn-sm" style="font-size:12px"><i class="ti ti-x" style="margin-right:3px"></i>Limpiar</button>
+        </div>
+        <div id="adm-person-result" style="margin-top:10px"></div>
+      </div>
+
       <div class="adm-grid">
         <div class="card">
           <div class="section-title"><i class="ti ti-calendar-plus" style="color:#7C3AED"></i>Turnos estándar por semana</div>
@@ -603,17 +616,6 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
               <input type="checkbox" id="adm-only-available" onchange="renderAdmin()" style="accent-color:#1a1a6e;width:13px;height:13px;cursor:pointer">
               Solo con vacantes
             </label>
-          </div>
-          <div style="background:white;border-radius:10px;border:1.5px solid #185FA5;padding:12px 14px;margin-bottom:14px">
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-              <i class="ti ti-user-search" style="color:#185FA5;font-size:16px"></i>
-              <span style="font-size:12px;font-weight:700;color:#1E293B">Buscar persona — ver todos sus turnos</span>
-            </div>
-            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-              <input type="text" id="adm-person-search" oninput="searchPersonAdmin()" placeholder="Escribe nombre o RUT..." style="flex:1;min-width:180px;padding:7px 11px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif">
-              <button onclick="clearPersonSearchAdmin()" class="btn btn-outline btn-sm" style="font-size:11px"><i class="ti ti-x" style="margin-right:3px"></i>Limpiar</button>
-            </div>
-            <div id="adm-person-result" style="margin-top:10px"></div>
           </div>
           <div id="admin-roster"></div>
         </div>
