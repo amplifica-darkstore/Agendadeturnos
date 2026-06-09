@@ -172,6 +172,7 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
 .overview-table tr:hover td{background:#F8FAFC}
 .overview-table .enrolled-list{display:flex;flex-wrap:wrap;gap:3px}
 .enrolled-chip{background:#EFF6FF;color:#1E40AF;border:1px solid #BFDBFE;border-radius:99px;padding:2px 8px;font-size:10px;font-weight:600}
+#topbar-period-sel option { color: #1E293B; background: white; }
 </style>
 </head>
 <body>
@@ -874,8 +875,10 @@ function fmtDateFull(str){
 function weekOf(str){
   const dt=parseDate(str);
   if(!dt)return 1;
-  // Group by calendar week-of-month (1-5)
-  return Math.ceil(dt.getDate()/7);
+  const def=currentMonthDef||MONTH_DEFS[0];
+  const start=new Date(def.dateFrom+'T12:00:00');
+  const diffDays=Math.floor((dt-start)/(1000*60*60*24));
+  return Math.floor(diffDays/7)+1;
 }
 function getWeekLabel(wk){
   const def=currentMonthDef;
