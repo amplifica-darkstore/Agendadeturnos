@@ -859,11 +859,13 @@ async function apiCall(body){
     const params={action:body.action};
     if(body.shift)params.shift=JSON.stringify(body.shift);
     if(body.id)params.id=body.id;
+    if(body.shiftId)params.shiftId=body.shiftId;
     if(body.rut)params.rut=body.rut;
     if(body.reason)params.reason=body.reason;
     if(body.blockedBy)params.blockedBy=body.blockedBy;
     if(body.blockType)params.blockType=body.blockType;
     if(body.monthKey)params.monthKey=body.monthKey;
+    if(body.person)params.person=JSON.stringify(body.person);
     return await jsonp(params);
   }catch(e){console.error('API error',e);return {error:e.toString()};}
 }
@@ -1987,11 +1989,10 @@ async function enroll(id){
   const btn=document.querySelector(`button[onclick="enroll('${id}')"]`);
   if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader" style="margin-right:4px"></i>Inscribiendo...';}
   try{
-    s.enrolled.push({rut:myRut,name:myName,enrolledAt:Date.now()});
-    const res=await apiCall({action:'saveShift',shift:s,monthKey:currentMonthKey});
+    const enrolledAt=Date.now();
+    const res=await apiCall({action:'enroll',monthKey:currentMonthKey,shiftId:s.id,person:{rut:myRut,name:myName,enrolledAt}});
     if(res&&res.ok){
-      // Sync to inscritos sheet master
-      syncInscritos(currentMonthKey,s.id,myRut);
+      s.enrolled.push({rut:myRut,name:myName,enrolledAt});
       // Update cross-period cache so conflict detection is immediately accurate
       allPeriodsShifts=allPeriodsShifts.filter(x=>x.id!==s.id);
       allPeriodsShifts.push({id:s.id,branch:s.branch,shift:s.shift,date:fmtDateISO(s.date),enrolled:s.enrolled});
@@ -2011,13 +2012,10 @@ async function enroll(id){
         <span style="color:#94A3B8;font-size:12px">${cancelMsg}<br>Quedan ${v} vacante${v===1?'':'s'} disponibles.</span>`
       );
     } else {
-      // Rollback
-      s.enrolled=s.enrolled.filter(e=>e.rut!==myRut);
-      showToast('Error al guardar. Intenta nuevamente.','err');
+      showToast((res&&res.error)||'Error al guardar. Intenta nuevamente.','err');
       renderWorker();
     }
   }catch(e){
-    s.enrolled=s.enrolled.filter(e=>e.rut!==myRut);
     showToast('Error de conexión. Intenta nuevamente.','err');
     renderWorker();
   }
@@ -2029,11 +2027,10 @@ async function unenroll(id){
   if(tLeft(myE.enrolledAt,s.date)<=0){showToast('Ya no es posible cancelar (menos de 48h para el turno). Contacta al administrador.','err');return;}
   const btn=document.querySelector(`button[onclick="unenroll('${id}')"]`);
   if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader" style="margin-right:4px"></i>Cancelando...';}
-  const backup=[...s.enrolled];
-  s.enrolled=s.enrolled.filter(e=>e.rut!==myRut);
   try{
-    const res=await apiCall({action:'saveShift',shift:s,monthKey:currentMonthKey});
+    const res=await apiCall({action:'unenroll',monthKey:currentMonthKey,shiftId:s.id,rut:myRut});
     if(res&&res.ok){
+      s.enrolled=s.enrolled.filter(e=>e.rut!==myRut);
       // Update cross-period cache
       allPeriodsShifts=allPeriodsShifts.filter(x=>x.id!==s.id);
       allPeriodsShifts.push({id:s.id,branch:s.branch,shift:s.shift,date:fmtDateISO(s.date),enrolled:s.enrolled});
@@ -2043,12 +2040,10 @@ async function unenroll(id){
         <span style="color:#64748B;font-size:12px">Puedes inscribirte en otro turno disponible.</span>`
       );
     } else {
-      s.enrolled=backup;
-      showToast('Error al cancelar. Intenta nuevamente.','err');
+      showToast((res&&res.error)||'Error al cancelar. Intenta nuevamente.','err');
       renderWorker();
     }
   }catch(e){
-    s.enrolled=backup;
     showToast('Error de conexión. Intenta nuevamente.','err');
     renderWorker();
   }
@@ -2419,22 +2414,18 @@ async function adminEnroll(){
   if(acr.conflict){showToast(acr.reason,'err');return;}
   // Admin can enroll even when limit=0 (pre-enrollment for when shift opens)
   if(s.limit>0&&s.enrolled.length>=s.limit){showToast('Turno completo. Aumenta las vacantes primero.','err');return;}
-  s.enrolled.push({rut:fRut,name,enrolledAt:0});
   try{
-    const res=await apiCall({action:'saveShift',shift:s,monthKey:currentMonthKey});
+    const res=await apiCall({action:'enroll',monthKey:currentMonthKey,shiftId:s.id,person:{rut:fRut,name,enrolledAt:0}});
     if(res&&res.ok){
-      // Sync to inscritos sheet for attendance app (fire-and-forget)
-      syncInscritos(currentMonthKey,s.id,fRut);
+      s.enrolled.push({rut:fRut,name,enrolledAt:0});
       renderAdmin();populateAdminSel();
       document.getElementById('adm-inp-name').value='';
       document.getElementById('adm-inp-rut').value='';
       showToast(`${name} inscrito/a correctamente`,'ok');
     }else{
-      s.enrolled=s.enrolled.filter(e=>e.rut!==fRut);
-      showToast('Error al inscribir. Intenta nuevamente.','err');
+      showToast((res&&res.error)||'Error al inscribir. Intenta nuevamente.','err');
     }
   }catch(e){
-    s.enrolled=s.enrolled.filter(e=>e.rut!==fRut);
     showToast('Error de conexión','err');
   }
 }
