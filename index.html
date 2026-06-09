@@ -1682,7 +1682,13 @@ async function loadAndRenderWorker(){
 }
 
 function renderMisTurnos(){
-  const misTurnos=shifts.filter(s=>(s.enrolled||[]).some(e=>e.rut===myRut));
+  // Only show upcoming enrolled shifts (today and future) in this widget
+  const today=new Date();today.setHours(0,0,0,0);
+  const misTurnos=shifts.filter(s=>{
+    if(!(s.enrolled||[]).some(e=>e.rut===myRut))return false;
+    const sd=parseDate(s.date);
+    return sd&&sd>=today;
+  });
   const section=document.getElementById('mis-turnos-section');
   const cont=document.getElementById('mis-turnos-content');
   if(!misTurnos.length){section.style.display='none';return;}
@@ -1720,7 +1726,11 @@ function renderMisTurnos(){
               <div style="font-size:11px;color:#475569;font-weight:600;margin-bottom:6px"><i class="ti ti-building-store" style="font-size:11px;margin-right:3px"></i>${s.branch}</div>
               <div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px">
                 <span style="background:#DCFCE7;color:#166534;border:1px solid #86EFAC;border-radius:99px;padding:2px 9px;font-size:10px;font-weight:700"><i class="ti ti-check" style="font-size:10px;margin-right:2px"></i>Inscrito</span>
-                ${canCancel?`<span style="background:#FEF3C7;color:#92400E;border:1px solid #FDE68A;border-radius:99px;padding:2px 7px;font-size:10px;font-weight:600"><i class="ti ti-clock" style="font-size:10px;margin-right:2px"></i>${hrs}h para cancelar</span>`:`<span style="background:#F1F5F9;color:#64748B;border:1px solid #E2E8F0;border-radius:99px;padding:2px 7px;font-size:10px;font-weight:600">Inscripción cerrada</span>`}
+                ${canCancel
+                  ?(hrs<=1
+                    ?`<span style="background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;border-radius:99px;padding:2px 7px;font-size:10px;font-weight:600"><i class="ti ti-clock" style="font-size:10px;margin-right:2px"></i>⚠ ${hrs}h de gracia para cancelar</span>`
+                    :`<span style="background:#FEF3C7;color:#92400E;border:1px solid #FDE68A;border-radius:99px;padding:2px 7px;font-size:10px;font-weight:600"><i class="ti ti-clock" style="font-size:10px;margin-right:2px"></i>Cancela hasta 48h antes (${hrs}h restantes)</span>`)
+                  :`<span style="background:#F1F5F9;color:#64748B;border:1px solid #E2E8F0;border-radius:99px;padding:2px 7px;font-size:10px;font-weight:600">Inscripción cerrada</span>`}
               </div>
             </div>`;
           }).join('')}
@@ -1849,8 +1859,11 @@ function shiftCardCompact(s){
     btn=`<button class="btn btn-disabled" style="margin-top:6px;padding:6px 10px;font-size:11px;background:#F1F5F9;color:#94A3B8;border-color:#E2E8F0"><i class="ti ti-lock" style="margin-right:3px"></i>Turno cerrado</button>`;
   }else if(mine){
     const left=tLeft(myE.enrolledAt,s.date);
-    if(left>0&&!shiftClosed){const hrs=Math.ceil(left/3600000);btn=`<button class="btn btn-enrolled" style="margin-top:6px;padding:6px 10px;font-size:11px" onclick="unenroll('${s.id}')"><i class="ti ti-check" style="margin-right:3px"></i>Inscrito — cancelar</button><div class="timer-badge"><i class="ti ti-clock" style="font-size:10px"></i><span id="timer-${s.id}">Cancela hasta ${hrs}h antes del turno</span></div>`;}
-    else{btn=`<button class="btn btn-locked" style="margin-top:6px;padding:6px 10px;font-size:11px"><i class="ti ti-check" style="margin-right:3px"></i>Inscrito</button>`;}
+    if(left>0&&!shiftClosed){
+      const hrs=Math.ceil(left/3600000);
+      const cancelInfo=hrs<=1?`⚠ Tienes ${hrs}h de gracia para cancelar`:`Puedes cancelar hasta 48h antes del turno (${hrs}h restantes)`;
+      btn=`<button class="btn btn-enrolled" style="margin-top:6px;padding:6px 10px;font-size:11px" onclick="unenroll('${s.id}')"><i class="ti ti-check" style="margin-right:3px"></i>Inscrito — cancelar</button><div class="timer-badge"><i class="ti ti-clock" style="font-size:10px"></i><span id="timer-${s.id}">${cancelInfo}</span></div>`;
+    }else{btn=`<button class="btn btn-locked" style="margin-top:6px;padding:6px 10px;font-size:11px"><i class="ti ti-check" style="margin-right:3px"></i>Inscrito</button>`;}
   }else if(conflict){btn=`<button class="btn btn-conflict" style="margin-top:6px;padding:6px 10px;font-size:11px;background:#DC2626;color:white;border-color:#DC2626;opacity:0.9;pointer-events:none;cursor:not-allowed"><i class="ti ti-ban" style="margin-right:3px"></i>${conflictReason}</button>`;}
   else if(full){btn=`<button class="btn btn-disabled" style="margin-top:6px;padding:6px 10px;font-size:11px"><i class="ti ti-lock" style="margin-right:3px"></i>Sin vacantes</button>`;}
   else if(s.limit===0){btn=`<button class="btn btn-disabled" style="margin-top:6px;padding:6px 10px;font-size:11px;background:#F1F5F9;color:#94A3B8;border-color:#E2E8F0"><i class="ti ti-lock" style="margin-right:3px"></i>Cerrado — sin vacantes</button>`;}
@@ -1900,8 +1913,11 @@ function shiftCard(s){
   let btn='';
   if(mine){
     const left=tLeft(myE.enrolledAt,s.date);
-    if(left>0){const hrs=Math.ceil(left/3600000);btn=`<button class="btn btn-enrolled" onclick="unenroll('${s.id}')"><i class="ti ti-x" style="margin-right:4px"></i>Inscrito — cancelar</button><div class="timer-badge"><i class="ti ti-clock" style="font-size:11px"></i><span id="timer-${s.id}">${hrs}h restantes para cancelar</span></div>`;}
-    else{btn=`<button class="btn btn-locked"><i class="ti ti-lock" style="margin-right:4px"></i>Inscrito — inscripción cerrada</button><div class="notice"><i class="ti ti-info-circle" style="margin-right:4px"></i>Para cambiar este turno, contacta al administrador.</div>`;}
+    if(left>0){
+      const hrs=Math.ceil(left/3600000);
+      const cancelInfo=hrs<=1?`⚠ Tienes ${hrs}h de gracia para cancelar (turno próximo)`:`Puedes cancelar hasta 48h antes del turno — ${hrs}h restantes`;
+      btn=`<button class="btn btn-enrolled" onclick="unenroll('${s.id}')"><i class="ti ti-x" style="margin-right:4px"></i>Inscrito — cancelar</button><div class="timer-badge"><i class="ti ti-clock" style="font-size:11px"></i><span id="timer-${s.id}">${cancelInfo}</span></div>`;
+    }else{btn=`<button class="btn btn-locked"><i class="ti ti-lock" style="margin-right:4px"></i>Inscrito — inscripción cerrada</button><div class="notice"><i class="ti ti-info-circle" style="margin-right:4px"></i>Para cambiar este turno, contacta al administrador.</div>`;}
   }else if(conflict){btn=`<button class="btn btn-conflict" style="background:#DC2626;color:white;border-color:#DC2626;opacity:0.9;pointer-events:none;cursor:not-allowed"><i class="ti ti-ban" style="margin-right:4px"></i>${conflictReason}</button>`;}
   else if(full){btn=`<button class="btn btn-disabled"><i class="ti ti-lock" style="margin-right:4px"></i>Sin vacantes disponibles</button>`;}
   else{btn=`<button class="btn btn-green" onclick="enroll('${s.id}')"><i class="ti ti-plus" style="margin-right:4px"></i>Inscribirme en este turno</button>`;}
@@ -1943,12 +1959,18 @@ async function enroll(id){
       apiCall({action:'updateAttendance',monthKey:currentMonthKey,shiftId:s.id,rut:myRut,asistio:'',pago:''}).catch(()=>{});
       renderWorker();
       const v=Math.max(0,s.limit-s.enrolled.length);
-      showModal('ok','¡Turno confirmado! 🎉',
+      const myE2=s.enrolled.find(e=>e.rut===myRut);
+      const msLeft=myE2?tLeft(myE2.enrolledAt,fmtDateISO(s.date)):-1;
+      const cancelMsg=msLeft>0?(msLeft<3600*1000*2
+        ?`Tienes <strong>${Math.ceil(msLeft/3600000)}h</strong> para cancelar si te equivocaste (gracia por turno próximo).`
+        :`Puedes cancelar hasta <strong>48 horas antes</strong> del turno.`)
+        :'Ya no puedes cancelar este turno.';
+      showModal('ok','¡Turno confirmado!',
         `<strong>${fmtDate(s.date)}</strong><br>
         Turno <strong>${s.shift}</strong> · ${getHorario(s)}<br>
         Sucursal <strong>${s.branch}</strong><br><br>
         <span style="color:#059669;font-weight:600">✓ Tu inscripción quedó registrada</span><br>
-        <span style="color:#94A3B8;font-size:12px">Tienes 20 minutos para cancelar si te equivocaste.<br>Quedan ${v} vacante${v===1?'':'s'} disponibles.</span>`
+        <span style="color:#94A3B8;font-size:12px">${cancelMsg}<br>Quedan ${v} vacante${v===1?'':'s'} disponibles.</span>`
       );
     } else {
       // Rollback
