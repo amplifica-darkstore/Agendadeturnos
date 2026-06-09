@@ -1880,6 +1880,8 @@ async function enroll(id){
     s.enrolled.push({rut:myRut,name:myName,enrolledAt:Date.now()});
     const res=await apiCall({action:'saveShift',shift:s,monthKey:currentMonthKey});
     if(res&&res.ok){
+      // Sync to inscritos sheet for attendance app (fire-and-forget)
+      apiCall({action:'updateAttendance',monthKey:currentMonthKey,shiftId:s.id,rut:myRut,asistio:'',pago:''}).catch(()=>{});
       renderWorker();
       const v=Math.max(0,s.limit-s.enrolled.length);
       showModal('ok','¡Turno confirmado! 🎉',
@@ -2228,6 +2230,8 @@ async function adminEnroll(){
   try{
     const res=await apiCall({action:'saveShift',shift:s,monthKey:currentMonthKey});
     if(res&&res.ok){
+      // Sync to inscritos sheet for attendance app (fire-and-forget)
+      apiCall({action:'updateAttendance',monthKey:currentMonthKey,shiftId:s.id,rut:fRut,asistio:'',pago:''}).catch(()=>{});
       renderAdmin();populateAdminSel();
       document.getElementById('adm-inp-name').value='';
       document.getElementById('adm-inp-rut').value='';
