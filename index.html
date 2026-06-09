@@ -2506,6 +2506,15 @@ async function renderHistory(){
       }).catch(function(){return[];});
     }));
     results.forEach(function(arr){allMine=allMine.concat(arr);});
+    // Dedup: same branch|shift|date → keep the one with most enrolled (same logic as loadShifts)
+    const byKey={};
+    allMine.forEach(function(s){
+      const key=s.branch+'|'+s.shift+'|'+fmtDateISO(s.date);
+      const ex=byKey[key];
+      if(!ex){byKey[key]=s;return;}
+      if((s.enrolled||[]).length>(ex.enrolled||[]).length)byKey[key]=s;
+    });
+    allMine=Object.values(byKey);
   }catch(e){
     cont.innerHTML='<div class="loading">Error al cargar historial.</div>';return;
   }
