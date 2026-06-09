@@ -215,8 +215,7 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
           <div class="tabs">
             <button class="tab active" id="tab-worker" onclick="goTab('worker',event)"><i class="ti ti-hard-hat" style="font-size:13px;margin-right:4px"></i>Trabajador</button>
             <button class="tab" id="tab-history" onclick="goTab('history',event)" style="display:none"><i class="ti ti-history" style="font-size:13px;margin-right:4px"></i>Mi historial</button>
-            <button class="tab" id="tab-admin" onclick="goTab('admin',event)"><i class="ti ti-calendar-month" style="font-size:13px;margin-right:4px"></i>Meses</button>
-            <button class="tab" id="tab-cyber" onclick="goTab('cyber',event)" style="display:none"><i class="ti ti-device-laptop" style="font-size:13px;margin-right:4px"></i>Cyber / Eventos</button>
+            <button class="tab" id="tab-admin" onclick="goTab('admin',event)"><i class="ti ti-settings" style="font-size:13px;margin-right:4px"></i>Admin</button>
             <button class="tab" id="tab-overview" onclick="goTab('overview',event)" style="display:none"><i class="ti ti-table" style="font-size:13px;margin-right:4px"></i>Resumen</button>
           </div>
         </div>
@@ -550,7 +549,7 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
           </div>
           <div class="g2" style="margin-bottom:10px">
             <div class="form-row"><label>Semana desde</label><select id="std-from"></select></div>
-            <div class="form-row"><label>Vacantes por turno</label><input type="number" id="std-limit" value="6" min="1" max="50"></div>
+            <div class="form-row"><label>Vacantes por turno</label><input type="number" id="std-limit" value="4" min="0" max="50"></div>
           </div>
           <button class="btn" style="background:#7C3AED;color:white;width:100%;margin-bottom:14px" onclick="createStandardShifts()"><i class="ti ti-bolt" style="margin-right:5px"></i>Crear turnos estándar</button>
           <div id="std-status" style="font-size:12px;color:#7C3AED;margin-bottom:10px;display:none"></div>
@@ -560,11 +559,11 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
             <select id="a-branch" onchange="checkDuplicate()"><option>Quilicura</option><option>Santiago Centro</option><option>Lo Barnechea</option><option>La Reina</option></select>
           </div>
           <div class="form-row"><label>Turno</label>
-            <select id="a-shift" onchange="checkDuplicate()"><option>AM</option><option>PM</option><option>Nocturno</option></select>
+            <select id="a-shift" onchange="checkDuplicate()"><option>Estándar</option><option>AM</option><option>PM</option><option>Nocturno</option></select>
           </div>
           <div class="g2">
             <div class="form-row"><label>Fecha</label><select id="a-date" onchange="checkDuplicate()"></select></div>
-            <div class="form-row"><label>Vacantes</label><input type="number" id="a-limit" value="6" min="1" max="50"></div>
+            <div class="form-row"><label>Vacantes</label><input type="number" id="a-limit" value="4" min="0" max="50"></div>
           </div>
           <button class="btn btn-green" id="btn-create" onclick="createShift()"><i class="ti ti-plus" style="margin-right:5px"></i>Crear turno personalizado</button>
           <div class="db-status" id="db-status"></div>
@@ -609,8 +608,11 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
       </div>
       <div class="card" style="margin-top:18px">
         <div class="section-title"><i class="ti ti-user-plus" style="color:#185FA5"></i>Inscribir persona manualmente</div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;align-items:end">
-          <div class="form-row" style="margin:0"><label>Turno</label><select id="adm-shift-sel"></select></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;align-items:end;margin-bottom:0">
+          <div class="form-row" style="margin:0"><label>Sucursal</label><select id="adm-enroll-branch" onchange="updateAdmEnrollDate()"><option value="">Todas</option><option>Quilicura</option><option>Santiago Centro</option><option>Lo Barnechea</option><option>La Reina</option></select></div>
+          <div class="form-row" style="margin:0"><label>Fecha</label><select id="adm-enroll-date" onchange="updateAdmEnrollShiftSel()"></select></div>
+          <div class="form-row" id="adm-enroll-turno-row" style="margin:0;display:none"><label>Turno</label><select id="adm-enroll-turno" onchange="updateAdmEnrollShiftSel()"></select></div>
+          <div style="display:none"><select id="adm-shift-sel"></select></div>
           <div class="form-row" style="margin:0"><label>Nombre</label><input type="text" id="adm-inp-name" placeholder="Nombre completo" maxlength="50"></div>
           <div class="form-row" style="margin:0"><label>RUT</label><input type="text" id="adm-inp-rut" placeholder="1.234.567-8" maxlength="12" oninput="onRutFmt(this)"></div>
           <button class="btn btn-primary btn-sm" style="padding:10px 16px;width:100%;margin:0" onclick="adminEnroll()"><i class="ti ti-user-plus" style="margin-right:4px"></i>Inscribir</button>
@@ -1298,12 +1300,6 @@ function openAdminPage(){
   document.getElementById('tab-admin').classList.add('active');
   document.getElementById('tab-worker').classList.remove('active');
   document.getElementById('tab-overview').style.display='flex';
-  document.getElementById('tab-cyber').style.display='flex';
-  // Asegurar que al abrir admin se esté en un mes normal
-  if(currentMonthDef&&currentMonthDef.isCyber){
-    currentMonthKey='jun-2026';
-    currentMonthDef=MONTH_DEFS.find(function(m){return m.key==='jun-2026';})||MONTH_DEFS[1];
-  }
   renderAdminTopbarActions();
   populateWeekFilters();populateDates();populateStdFrom();
   loadAndRenderAdmin();
@@ -1421,19 +1417,12 @@ function goTab(tab,e){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   e.target.closest('.tab').classList.add('active');
   if(tab==='worker'){
-    if(myRole==='admin'){myRole='';myRut='';myName='';try{localStorage.removeItem('cj26_role');}catch(e){}document.getElementById('topbar-actions').innerHTML='';document.getElementById('tab-overview').style.display='none';document.getElementById('tab-cyber').style.display='none';allPages('page-login');return;}
+    if(myRole==='admin'){myRole='';myRut='';myName='';try{localStorage.removeItem('cj26_role');}catch(e){}document.getElementById('topbar-actions').innerHTML='';document.getElementById('tab-overview').style.display='none';allPages('page-login');return;}
     if(!myRut){allPages('page-login');return;}
     allPages('page-worker');loadAndRenderWorker();
   }else if(tab==='admin'){
     if(myRole!=='admin'){allPages('page-login');document.getElementById('form-admin').style.display='block';document.getElementById('form-worker').style.display='none';document.getElementById('btn-role-admin').classList.add('selected');document.getElementById('btn-role-worker').classList.remove('selected');return;}
-    // Meses normales: cambiar a jun-2026 si estaba en Cyber
-    if(currentMonthDef&&currentMonthDef.isCyber){switchPeriodFromFilter('jun-2026','admin');return;}
     allPages('page-admin');loadAndRenderAdmin();
-  }else if(tab==='cyber'){
-    if(myRole!=='admin')return;
-    // Cambiar al período Cyber
-    switchPeriodFromFilter('cyber-jun-2026','admin');
-    allPages('page-admin');
   }else if(tab==='overview'){
     if(myRole!=='admin')return;
     allPages('page-overview');loadAndRenderOverview();
@@ -1822,9 +1811,42 @@ async function loadAndRenderAdmin(){
 }
 
 function populateAdminSel(){
-  const sel=document.getElementById('adm-shift-sel');sel.innerHTML='';
-  if(!shifts.length){sel.innerHTML='<option>Sin turnos aún</option>';return;}
-  shifts.forEach(s=>{const o=document.createElement('option');o.value=s.id;o.textContent=`${s.shift} – ${fmtDate(s.date)} – ${s.branch}`;sel.appendChild(o);});
+  // legacy hidden select kept for adminEnroll() compatibility
+  const sel=document.getElementById('adm-shift-sel');if(sel)sel.innerHTML='';
+  updateAdmEnrollDate();
+}
+function updateAdmEnrollDate(){
+  const branchSel=document.getElementById('adm-enroll-branch');
+  const dateSel=document.getElementById('adm-enroll-date');
+  if(!dateSel)return;
+  const branch=branchSel?branchSel.value:'';
+  const filtered=shifts.filter(s=>!branch||s.branch===branch);
+  const dates=[...new Set(filtered.map(s=>s.date))].sort();
+  dateSel.innerHTML=dates.length?dates.map(d=>`<option value="${d}">${fmtDate(d)}</option>`).join(''):'<option value="">Sin turnos</option>';
+  updateAdmEnrollShiftSel();
+}
+function updateAdmEnrollShiftSel(){
+  const branchSel=document.getElementById('adm-enroll-branch');
+  const dateSel=document.getElementById('adm-enroll-date');
+  const turnoRow=document.getElementById('adm-enroll-turno-row');
+  const turnoSel=document.getElementById('adm-enroll-turno');
+  const hiddenSel=document.getElementById('adm-shift-sel');
+  if(!dateSel)return;
+  const branch=branchSel?branchSel.value:'';
+  const date=dateSel.value;
+  const isCyber=currentMonthDef&&currentMonthDef.isCyber;
+  const matchShifts=shifts.filter(s=>(!branch||s.branch===branch)&&(!date||s.date===date));
+  if(isCyber){
+    turnoRow.style.display='block';
+    const turnos=[...new Set(matchShifts.map(s=>s.shift))];
+    turnoSel.innerHTML=turnos.map(t=>`<option value="${t}">${t}</option>`).join('');
+  }else{
+    turnoRow.style.display='none';
+  }
+  // sync hidden select
+  const currentTurno=isCyber?turnoSel.value:'Estándar';
+  const matched=matchShifts.find(s=>!isCyber||s.shift===currentTurno);
+  if(hiddenSel)hiddenSel.innerHTML=matched?`<option value="${matched.id}">${matched.shift}</option>`:'<option value="">Sin turno</option>';
 }
 
 function renderAdmin(){
