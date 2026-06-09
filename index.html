@@ -1616,13 +1616,20 @@ async function loadShifts(){
           horario:getHorario(s)
         };
       });
-      const seen=new Set();
-      shifts=valid.filter(function(s){
+      // Deduplicate by branch|shift|date — keep the one with most vacantes available
+      const byKey={};
+      valid.forEach(function(s){
         const key=s.branch+'|'+s.shift+'|'+s.date;
-        if(seen.has(key))return false;
-        seen.add(key);
-        return true;
+        const vac=Math.max(0,s.limit-s.enrolled.length);
+        const existing=byKey[key];
+        if(!existing){byKey[key]=s;return;}
+        const existingVac=Math.max(0,existing.limit-existing.enrolled.length);
+        // Prefer the shift with more vacantes; on tie prefer more enrolled (more "official")
+        if(vac>existingVac||(vac===existingVac&&s.enrolled.length>existing.enrolled.length)){
+          byKey[key]=s;
+        }
       });
+      shifts=Object.values(byKey);
     }
     shifts.sort(function(a,b){
       const da=parseDate(a.date),db=parseDate(b.date);
