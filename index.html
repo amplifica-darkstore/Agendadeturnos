@@ -617,6 +617,10 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
               <input type="checkbox" id="adm-only-available" onchange="renderAdmin()" style="accent-color:#1a1a6e;width:13px;height:13px;cursor:pointer">
               Solo con vacantes
             </label>
+            <label style="display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:12px;font-family:'DM Sans',sans-serif;font-weight:500;color:#1E293B;background:white;cursor:pointer;user-select:none;white-space:nowrap">
+              <input type="checkbox" id="adm-only-future" onchange="renderAdmin()" style="accent-color:#1a1a6e;width:13px;height:13px;cursor:pointer">
+              Solo días futuros
+            </label>
           </div>
           <div id="admin-roster"></div>
         </div>
@@ -2023,15 +2027,18 @@ function renderAdmin(){
   const fw=document.getElementById('adm-filter-week');
   const fq=document.getElementById('adm-filter-search');
   const admOnlyAvail=document.getElementById('adm-only-available')&&document.getElementById('adm-only-available').checked;
+  const admOnlyFuture=document.getElementById('adm-only-future')&&document.getElementById('adm-only-future').checked;
   const filterBranch=fb?fb.value:'';
   const filterShift=fs?fs.value:'';
   const filterWeek=fw?parseInt(fw.value)||0:0;
   const filterQuery=fq?fq.value.trim().toLowerCase():'';
+  const todayISO=new Date().toISOString().slice(0,10);
   const filteredShifts=shifts.filter(function(s){
     if(filterBranch&&s.branch!==filterBranch)return false;
     if(filterShift&&s.shift!==filterShift)return false;
     if(filterWeek&&weekOf(s.date)!==parseInt(filterWeek))return false;
     if(admOnlyAvail&&(s.enrolled||[]).length>=s.limit)return false;
+    if(admOnlyFuture&&s.date<todayISO)return false;
     if(filterQuery){
       const matchShift=s.shift.toLowerCase().includes(filterQuery);
       const matchBranch=s.branch.toLowerCase().includes(filterQuery);
