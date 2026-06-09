@@ -1853,9 +1853,12 @@ function shiftCardCompact(s){
     else{btn=`<button class="btn btn-locked" style="margin-top:6px;padding:6px 10px;font-size:11px"><i class="ti ti-check" style="margin-right:3px"></i>Inscrito</button>`;}
   }else if(conflict){btn=`<button class="btn btn-conflict" style="margin-top:6px;padding:6px 10px;font-size:11px;background:#DC2626;color:white;border-color:#DC2626;opacity:0.9;pointer-events:none;cursor:not-allowed"><i class="ti ti-ban" style="margin-right:3px"></i>${conflictReason}</button>`;}
   else if(full){btn=`<button class="btn btn-disabled" style="margin-top:6px;padding:6px 10px;font-size:11px"><i class="ti ti-lock" style="margin-right:3px"></i>Sin vacantes</button>`;}
+  else if(s.limit===0){btn=`<button class="btn btn-disabled" style="margin-top:6px;padding:6px 10px;font-size:11px;background:#F1F5F9;color:#94A3B8;border-color:#E2E8F0"><i class="ti ti-lock" style="margin-right:3px"></i>Cerrado — sin vacantes</button>`;}
   else{btn=`<button class="btn btn-green" style="margin-top:6px;padding:6px 10px;font-size:12px" onclick="enroll('${s.id}')"><i class="ti ti-plus" style="margin-right:3px"></i>Inscribirme</button>`;}
 
-  return `<div style="background:${CARD_BG[s.shift]||bc.bg};border:1.5px solid ${CARD_BORDER[s.shift]||bc.border};border-left:4px solid ${bc.dot};border-radius:12px;padding:10px 12px">
+  const enrolledBanner=mine?`<div style="background:#DCFCE7;border:1px solid #86EFAC;border-radius:8px;padding:5px 9px;margin-bottom:5px;font-size:11px;font-weight:700;color:#166534;display:flex;align-items:center;gap:5px"><i class="ti ti-check-circle" style="font-size:13px"></i>Ya estás inscrito/a en este turno</div>`:'';
+
+  return `<div style="background:${mine?'#F0FDF4':CARD_BG[s.shift]||bc.bg};border:1.5px solid ${mine?'#4ADE80':CARD_BORDER[s.shift]||bc.border};border-left:4px solid ${mine?'#16A34A':bc.dot};border-radius:12px;padding:10px 12px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
       <div style="display:flex;align-items:center;gap:6px">
         <span class="badge ${SHIFT_BADGE[s.shift]}">${s.shift}</span>
@@ -1868,6 +1871,7 @@ function shiftCardCompact(s){
     </div>
     <div class="progress-bar" style="height:4px;margin:4px 0"><div class="pf ${fc}" style="width:${Math.min(pct,100)}%"></div></div>
     <div style="font-size:10px;color:#64748B;font-weight:600">${en.length} de ${s.limit} inscritos</div>
+    ${enrolledBanner}
     ${btn}
   </div>`;
 }
@@ -2350,7 +2354,8 @@ async function adminEnroll(){
   if(s.enrolled.some(e=>e.rut===fRut)){showToast('Ya está inscrita en ese turno','err');return;}
   const acr=hasConflict(fRut,s.shift,s.date);
   if(acr.conflict){showToast(acr.reason,'err');return;}
-  if(s.enrolled.length>=s.limit){showToast('Turno completo. Aumenta las vacantes primero.','err');return;}
+  // Admin can enroll even when limit=0 (pre-enrollment for when shift opens)
+  if(s.limit>0&&s.enrolled.length>=s.limit){showToast('Turno completo. Aumenta las vacantes primero.','err');return;}
   s.enrolled.push({rut:fRut,name,enrolledAt:0});
   try{
     const res=await apiCall({action:'saveShift',shift:s,monthKey:currentMonthKey});
