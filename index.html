@@ -1667,13 +1667,20 @@ async function loadShifts(){
           horario:getHorario(s)
         };
       });
-      // Deduplicate by branch|shift|date — keep the one with most enrolled (the real original)
+      // Deduplicate by branch|shift|date — MERGE enrolled arrays, keep shift with most enrolled as primary
       const byKey={};
       valid.forEach(function(s){
         const key=s.branch+'|'+s.shift+'|'+s.date;
         const existing=byKey[key];
         if(!existing){byKey[key]=s;return;}
-        if(s.enrolled.length>existing.enrolled.length){byKey[key]=s;}
+        // Merge: add people from secondary shift that aren't in primary
+        const primary=s.enrolled.length>=existing.enrolled.length?s:existing;
+        const secondary=s.enrolled.length>=existing.enrolled.length?existing:s;
+        const seen=new Set(primary.enrolled.map(function(e){return e.rut;}));
+        secondary.enrolled.forEach(function(e){
+          if(e.rut&&!seen.has(e.rut)){primary.enrolled.push(e);seen.add(e.rut);}
+        });
+        byKey[key]=primary;
       });
       shifts=Object.values(byKey);
       // Dedup enrolled arrays within each shift — same RUT can't appear twice
@@ -2292,33 +2299,35 @@ async function cleanDuplicateEnrollments(){
       }
     }
 
-    // PASO 2: Limpiar persona en >1 turno mismo día misma sucursal (shift IDs distintos)
-    const byBranchDay={};
+    // PASO 2: Personas en >1 shift mismo día+sucursal → mover al shift primario, quitar del secundario
+    const byBranchShiftDay={};
     allShifts.forEach(function(s){
-      const key=s.branch+'|'+fmtDateISO(s.date);
-      if(!byBranchDay[key])byBranchDay[key]=[];
-      byBranchDay[key].push(s);
+      const key=s.branch+'|'+s.shift+'|'+fmtDateISO(s.date);
+      if(!byBranchShiftDay[key])byBranchShiftDay[key]=[];
+      byBranchShiftDay[key].push(s);
     });
-    for(const key of Object.keys(byBranchDay)){
-      const dayShifts=byBranchDay[key];
+    for(const key of Object.keys(byBranchShiftDay)){
+      const dayShifts=byBranchShiftDay[key];
       if(dayShifts.length<2)continue;
-      const rutShifts={};
-      dayShifts.forEach(function(s){
-        (s.enrolled||[]).forEach(function(e){
-          if(!rutShifts[e.rut])rutShifts[e.rut]=[];
-          rutShifts[e.rut].push(s);
-        });
-      });
-      for(const rut of Object.keys(rutShifts)){
-        const dupeShifts=rutShifts[rut];
-        if(dupeShifts.length<2)continue;
-        // Keep shift with most enrolled (or highest limit), unenroll from the rest
-        dupeShifts.sort(function(a,b){return(b.enrolled.length-a.enrolled.length)||(b.limit-a.limit);});
-        for(const s of dupeShifts.slice(1)){
-          const res=await apiCall({action:'unenroll',monthKey:currentMonthKey,shiftId:s.id,rut});
-          if(res&&res.ok){s.enrolled=s.enrolled.filter(function(e){return e.rut!==rut;});removed++;}
+      // Primary = most enrolled (or highest limit)
+      dayShifts.sort(function(a,b){return(b.enrolled.length-a.enrolled.length)||(b.limit-a.limit);});
+      const primary=dayShifts[0];
+      const primaryRuts=new Set(primary.enrolled.map(function(e){return e.rut;}));
+      for(const secondary of dayShifts.slice(1)){
+        for(const e of (secondary.enrolled||[])){
+          if(!e.rut)continue;
+          // Add to primary if not already there
+          if(!primaryRuts.has(e.rut)){
+            primary.enrolled.push(e);
+            primaryRuts.add(e.rut);
+          }
+          // Remove from secondary
+          const res=await apiCall({action:'unenroll',monthKey:currentMonthKey,shiftId:secondary.id,rut:e.rut});
+          if(res&&res.ok){secondary.enrolled=secondary.enrolled.filter(function(x){return x.rut!==e.rut;});removed++;}
           else errors++;
         }
+        // Save primary with merged enrolled
+        await apiCall({action:'saveShift',shift:primary,monthKey:currentMonthKey});
       }
     }
 
