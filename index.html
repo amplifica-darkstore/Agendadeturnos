@@ -1676,6 +1676,14 @@ async function loadShifts(){
         if(s.enrolled.length>existing.enrolled.length){byKey[key]=s;}
       });
       shifts=Object.values(byKey);
+      // Dedup enrolled arrays within each shift — same RUT can't appear twice
+      shifts.forEach(function(s){
+        const seen={};
+        s.enrolled=s.enrolled.filter(function(e){
+          if(!e.rut||seen[e.rut])return false;
+          seen[e.rut]=true;return true;
+        });
+      });
     }
     shifts.sort(function(a,b){
       const da=parseDate(a.date),db=parseDate(b.date);
@@ -2262,22 +2270,38 @@ async function cleanDuplicateEnrollments(){
   st.style.display='block';st.style.color='#DC2626';st.textContent='Buscando duplicados...';
   let removed=0,errors=0;
   try{
-    // Load current period shifts
     const r=await apiCall({action:'getShifts',monthKey:currentMonthKey});
     const allShifts=(r&&r.shifts)||[];
-    // Group by branch|date — find people enrolled in >1 shift same branch+day
+
+    // PASO 1: Limpiar duplicados DENTRO del mismo turno (mismo RUT dos veces en enrolled)
+    for(const s of allShifts){
+      const seen={};const dupes=[];
+      (s.enrolled||[]).forEach(function(e){
+        if(!e.rut)return;
+        if(seen[e.rut]){dupes.push(e.rut);}else{seen[e.rut]=true;}
+      });
+      if(dupes.length>0){
+        // Remove extra entries keeping first occurrence
+        const seenClean={};
+        s.enrolled=s.enrolled.filter(function(e){
+          if(!e.rut||seenClean[e.rut])return false;
+          seenClean[e.rut]=true;return true;
+        });
+        const res=await apiCall({action:'saveShift',shift:s,monthKey:currentMonthKey});
+        if(res&&res.ok)removed+=dupes.length;else errors+=dupes.length;
+      }
+    }
+
+    // PASO 2: Limpiar persona en >1 turno mismo día misma sucursal (shift IDs distintos)
     const byBranchDay={};
     allShifts.forEach(function(s){
-      const dateISO=fmtDateISO(s.date);
-      const key=s.branch+'|'+dateISO;
+      const key=s.branch+'|'+fmtDateISO(s.date);
       if(!byBranchDay[key])byBranchDay[key]=[];
       byBranchDay[key].push(s);
     });
-    // For each branch+day with >1 shift, find people in multiple shifts
     for(const key of Object.keys(byBranchDay)){
       const dayShifts=byBranchDay[key];
       if(dayShifts.length<2)continue;
-      // Build map rut → shifts they appear in
       const rutShifts={};
       dayShifts.forEach(function(s){
         (s.enrolled||[]).forEach(function(e){
@@ -2285,28 +2309,23 @@ async function cleanDuplicateEnrollments(){
           rutShifts[e.rut].push(s);
         });
       });
-      // For each rut in >1 shift, keep the one with most enrolled, remove from others
       for(const rut of Object.keys(rutShifts)){
         const dupeShifts=rutShifts[rut];
         if(dupeShifts.length<2)continue;
-        // Keep shift with highest limit (or most enrolled), remove from rest
+        // Keep shift with most enrolled (or highest limit), unenroll from the rest
         dupeShifts.sort(function(a,b){return(b.enrolled.length-a.enrolled.length)||(b.limit-a.limit);});
-        const keep=dupeShifts[0];
-        const toRemove=dupeShifts.slice(1);
-        for(const s of toRemove){
+        for(const s of dupeShifts.slice(1)){
           const res=await apiCall({action:'unenroll',monthKey:currentMonthKey,shiftId:s.id,rut});
-          if(res&&res.ok){
-            s.enrolled=s.enrolled.filter(function(e){return e.rut!==rut;});
-            removed++;
-          } else {
-            errors++;
-          }
+          if(res&&res.ok){s.enrolled=s.enrolled.filter(function(e){return e.rut!==rut;});removed++;}
+          else errors++;
         }
       }
     }
+
     st.style.color=errors>0?'#DC2626':'#166534';
-    st.textContent='Listo: '+removed+' duplicados eliminados'+(errors?' · '+errors+' errores':'')+'.'
+    st.textContent='Listo: '+removed+' duplicados eliminados'+(errors?' · '+errors+' errores':'')+'.';
     if(removed>0){await loadShifts();renderAdmin();}
+    else if(!errors)st.textContent='✓ No se encontraron duplicados.';
   }catch(e){
     st.style.color='#DC2626';st.textContent='Error: '+e.toString();
   }
