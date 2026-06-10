@@ -1004,19 +1004,22 @@ function hasConflict(rut,type,date){
   // Check across ALL periods (current + cached) to prevent same-day across different events
   const allShiftsToCheck=[...shifts,...allPeriodsShifts.filter(s=>!shifts.some(x=>x.id===s.id))];
 
-  // Max 1 turno por día (cualquier sucursal, cualquier período)
-  if(allShiftsToCheck.some(s=>fmtDateISO(s.date)===thisISO&&(s.enrolled||[]).some(e=>e.rut===rut)))
+  // Max 1 turno por día — use unique dates to avoid counting duplicates twice
+  const enrolledDates=new Set(allShiftsToCheck
+    .filter(function(s){return(s.enrolled||[]).some(function(e){return e.rut===rut;});})
+    .map(function(s){return fmtDateISO(s.date);}));
+  if(enrolledDates.has(thisISO))
     return{conflict:true,reason:'Ya tienes un turno ese día (máx. 1 por día)'};
 
-  // Max 5 turnos por semana (across all periods)
+  // Max 5 turnos por semana — count unique DATES (not shifts, to avoid double-counting duplicates)
   const isoWeek=function(d){const j=new Date(d.getFullYear(),0,1);return Math.ceil(((d-j)/86400000+j.getDay()+1)/7);};
   const tWeek=isoWeek(thisDate),tYear=thisDate.getFullYear();
-  const weekCount=allShiftsToCheck.filter(s=>{
-    if(!(s.enrolled||[]).some(e=>e.rut===rut))return false;
+  const weekDates=new Set(allShiftsToCheck.filter(function(s){
+    if(!(s.enrolled||[]).some(function(e){return e.rut===rut;}))return false;
     const sd=parseShiftDate(s.date);
     return isoWeek(sd)===tWeek&&sd.getFullYear()===tYear;
-  }).length;
-  if(weekCount>=5)return{conflict:true,reason:'Ya tienes 5 turnos esta semana (máximo permitido)'};
+  }).map(function(s){return fmtDateISO(s.date);}));
+  if(weekDates.size>=5)return{conflict:true,reason:'Ya tienes 5 turnos esta semana (máximo permitido)'};
 
   // Same-day overlaps: AM+PM, PM+Nocturno
   const overlaps={AM:['PM'],PM:['AM','Nocturno'],Nocturno:['PM']};
