@@ -880,6 +880,10 @@ async function apiCall(body){
     if(body.blockType)params.blockType=body.blockType;
     if(body.monthKey)params.monthKey=body.monthKey;
     if(body.person)params.person=JSON.stringify(body.person);
+    if(body.branch)params.branch=body.branch;
+    if(body.shiftType)params.shiftType=body.shiftType;
+    if(body.date)params.date=body.date;
+    if(body.horario)params.horario=body.horario;
     return await jsonp(params);
   }catch(e){console.error('API error',e);return {error:e.toString()};}
 }
@@ -2266,7 +2270,8 @@ async function syncMissingInscritos(){
     allShiftsPerPeriod.forEach(function(p){
       p.shifts.forEach(function(s){
         (s.enrolled||[]).forEach(function(e){
-          tasks.push({monthKey:p.monthKey,shiftId:s.id,rut:e.rut,name:e.name||e.rut,enrolledAt:e.enrolledAt||0});
+          tasks.push({monthKey:p.monthKey,shiftId:s.id,rut:e.rut,name:e.name||e.rut,enrolledAt:e.enrolledAt||0,
+            branch:s.branch,shiftType:s.shift,date:fmtDateISO(s.date),horario:getHorario(s)});
         });
       });
     });
@@ -2276,7 +2281,9 @@ async function syncMissingInscritos(){
     for(let i=0;i<tasks.length;i+=5){
       const batch=tasks.slice(i,i+5);
       await Promise.all(batch.map(function(t){
-        return apiCall({action:'forceSync',monthKey:t.monthKey,shiftId:t.shiftId,person:{rut:t.rut,name:t.name,enrolledAt:t.enrolledAt}})
+        return apiCall({action:'forceSync',monthKey:t.monthKey,shiftId:t.shiftId,
+            person:{rut:t.rut,name:t.name,enrolledAt:t.enrolledAt},
+            branch:t.branch,shiftType:t.shiftType,date:t.date,horario:t.horario})
           .then(function(r){
             if(r&&r.ok){if(r.created)synced++;else skipped++;}
             else errors++;
