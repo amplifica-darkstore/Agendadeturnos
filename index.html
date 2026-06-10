@@ -619,15 +619,6 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
           <div class="db-status" id="db-status"></div>
           <div id="dup-warning" style="display:none;margin-top:8px;background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;padding:8px 12px;font-size:12px;color:#991B1B;font-weight:500"><i class="ti ti-alert-triangle" style="margin-right:4px"></i><span id="dup-warning-text"></span></div>
             </div>
-            <div>
-              <div class="section-title" style="margin-top:0"><i class="ti ti-refresh" style="color:#7C3AED"></i>Sincronizar hoja Inscritos</div>
-              <div style="background:#F3E8FF;border:1px solid #DDD6FE;border-radius:10px;padding:12px">
-                <div style="font-size:11px;color:#6B21A8;margin-bottom:8px;line-height:1.6">Detecta personas que están en los turnos pero no tienen fila en la hoja maestra Inscritos, y las crea automáticamente.</div>
-                <button class="btn" style="background:#7C3AED;color:white;width:100%;font-size:12px;padding:9px;margin-bottom:6px" onclick="syncMissingInscritos()"><i class="ti ti-database-import" style="margin-right:4px"></i>Sincronizar Inscritos faltantes</button>
-                <button class="btn" style="background:#DC2626;color:white;width:100%;font-size:12px;padding:9px" onclick="cleanDuplicateEnrollments()"><i class="ti ti-trash" style="margin-right:4px"></i>Limpiar inscritos duplicados</button>
-                <div id="sync-status" style="font-size:12px;margin-top:6px;display:none"></div>
-              </div>
-            </div>
           </div>
         </div>
         <div class="card" style="overflow-y:auto;max-height:580px;padding-top:0">
@@ -2275,120 +2266,6 @@ async function createStandardShifts(){
   setTimeout(()=>{status.style.display='none';},5000);
 }
 
-async function cleanDuplicateEnrollments(){
-  const st=document.getElementById('sync-status');
-  st.style.display='block';st.style.color='#DC2626';st.textContent='Buscando duplicados...';
-  let removed=0,errors=0;
-  try{
-    const r=await apiCall({action:'getShifts',monthKey:currentMonthKey});
-    const allShifts=(r&&r.shifts)||[];
-
-    // PASO 1: Limpiar duplicados DENTRO del mismo turno (mismo RUT dos veces en enrolled)
-    for(const s of allShifts){
-      const seen={};const dupes=[];
-      (s.enrolled||[]).forEach(function(e){
-        if(!e.rut)return;
-        if(seen[e.rut]){dupes.push(e.rut);}else{seen[e.rut]=true;}
-      });
-      if(dupes.length>0){
-        // Remove extra entries keeping first occurrence
-        const seenClean={};
-        s.enrolled=s.enrolled.filter(function(e){
-          if(!e.rut||seenClean[e.rut])return false;
-          seenClean[e.rut]=true;return true;
-        });
-        const res=await apiCall({action:'saveShift',shift:s,monthKey:currentMonthKey});
-        if(res&&res.ok)removed+=dupes.length;else errors+=dupes.length;
-      }
-    }
-
-    // PASO 2: Personas en >1 shift mismo día+sucursal → mover al shift primario, quitar del secundario
-    const byBranchShiftDay={};
-    allShifts.forEach(function(s){
-      const key=s.branch+'|'+s.shift+'|'+fmtDateISO(s.date);
-      if(!byBranchShiftDay[key])byBranchShiftDay[key]=[];
-      byBranchShiftDay[key].push(s);
-    });
-    for(const key of Object.keys(byBranchShiftDay)){
-      const dayShifts=byBranchShiftDay[key];
-      if(dayShifts.length<2)continue;
-      // Primary = most enrolled (or highest limit)
-      dayShifts.sort(function(a,b){return(b.enrolled.length-a.enrolled.length)||(b.limit-a.limit);});
-      const primary=dayShifts[0];
-      const primaryRuts=new Set(primary.enrolled.map(function(e){return e.rut;}));
-      for(const secondary of dayShifts.slice(1)){
-        for(const e of (secondary.enrolled||[])){
-          if(!e.rut)continue;
-          // Add to primary if not already there
-          if(!primaryRuts.has(e.rut)){
-            primary.enrolled.push(e);
-            primaryRuts.add(e.rut);
-          }
-          // Remove from secondary
-          const res=await apiCall({action:'unenroll',monthKey:currentMonthKey,shiftId:secondary.id,rut:e.rut});
-          if(res&&res.ok){secondary.enrolled=secondary.enrolled.filter(function(x){return x.rut!==e.rut;});removed++;}
-          else errors++;
-        }
-        // Save primary with merged enrolled
-        await apiCall({action:'saveShift',shift:primary,monthKey:currentMonthKey});
-      }
-    }
-
-    st.style.color=errors>0?'#DC2626':'#166534';
-    st.textContent='Listo: '+removed+' duplicados eliminados'+(errors?' · '+errors+' errores':'')+'.';
-    if(removed>0){await loadShifts();renderAdmin();}
-    else if(!errors)st.textContent='✓ No se encontraron duplicados.';
-  }catch(e){
-    st.style.color='#DC2626';st.textContent='Error: '+e.toString();
-  }
-}
-
-async function syncMissingInscritos(){
-  const st=document.getElementById('sync-status');
-  st.style.display='block';st.style.color='#6B21A8';st.textContent='Cargando turnos del período actual...';
-  let total=0,synced=0,errors=0,skipped=0;
-  try{
-    // Load only active periods (cyber + current) to avoid timeout
-    const activePeriods=MONTH_DEFS.filter(function(m){return m.key===currentMonthKey||m.key==='cyber-jun-2026';});
-    const allShiftsPerPeriod=await Promise.all(activePeriods.map(function(m){
-      return apiCall({action:'getShifts',monthKey:m.key}).then(function(r){
-        return {monthKey:m.key,shifts:(r&&r.shifts)||[]};
-      }).catch(function(){return{monthKey:m.key,shifts:[]};});
-    }));
-    // For each shift with enrolled people, call forceSync
-    const tasks=[];
-    allShiftsPerPeriod.forEach(function(p){
-      p.shifts.forEach(function(s){
-        (s.enrolled||[]).forEach(function(e){
-          tasks.push({monthKey:p.monthKey,shiftId:s.id,rut:e.rut,name:e.name||e.rut,enrolledAt:e.enrolledAt||0,
-            branch:s.branch,shiftType:s.shift,date:fmtDateISO(s.date),horario:getHorario(s)});
-        });
-      });
-    });
-    total=tasks.length;
-    st.textContent='Sincronizando '+total+' inscripciones...';
-    // Process in batches of 5 to avoid overloading GAS
-    for(let i=0;i<tasks.length;i+=5){
-      const batch=tasks.slice(i,i+5);
-      await Promise.all(batch.map(function(t){
-        return apiCall({action:'forceSync',monthKey:t.monthKey,shiftId:t.shiftId,
-            person:{rut:t.rut,name:t.name,enrolledAt:t.enrolledAt},
-            branch:t.branch,shiftType:t.shiftType,date:t.date,horario:t.horario})
-          .then(function(r){
-            if(r&&r.ok){if(r.created)synced++;else skipped++;}
-            else errors++;
-          }).catch(function(){errors++;});
-      }));
-      st.textContent='Procesando '+(Math.min(i+5,total))+'/'+total+'...';
-    }
-    const color=errors>0?'#DC2626':'#166534';
-    st.style.color=color;
-    st.innerHTML='<strong>Listo:</strong> '+synced+' filas creadas · '+skipped+' ya existían · '+errors+' errores de '+total+' total.';
-    if(errors>0)st.innerHTML+='<br><span style="font-size:10px">Para los errores, revisa que el GAS tenga la acción <code>forceSync</code>.</span>';
-  }catch(e){
-    st.style.color='#DC2626';st.textContent='Error: '+e.toString();
-  }
-}
 
 async function closeAllVacantesNow(){
   if(!confirm('¿Cerrar TODOS los turnos del período a 0 vacantes?'))return;
