@@ -602,15 +602,9 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
             <div id="batch-status" style="font-size:12px;color:#166534;margin-top:6px;display:none"></div>
           </div>
           <hr style="border:none;border-top:1px solid #E2E8F0;margin-bottom:14px">
-          <div class="section-title" style="margin-top:0"><i class="ti ti-refresh" style="color:#7C3AED"></i>Sincronizar hoja Inscritos</div>
-          <div style="background:#F3E8FF;border-radius:10px;padding:12px;margin-bottom:8px">
-            <div style="font-size:11px;color:#6B21A8;margin-bottom:8px">Detecta personas que están en los turnos pero no tienen fila en la hoja maestra Inscritos, y las sincroniza.</div>
-            <button class="btn" style="background:#7C3AED;color:white;width:100%;font-size:12px;padding:9px" onclick="syncMissingInscritos()"><i class="ti ti-database-import" style="margin-right:4px"></i>Sincronizar Inscritos faltantes</button>
-            <div id="sync-status" style="font-size:12px;margin-top:6px;display:none"></div>
-          </div>
-          </div>
-          <hr style="border:none;border-top:1px solid #E2E8F0;margin-bottom:14px">
-          <div class="section-title" style="margin-top:0"><i class="ti ti-plus" style="color:#1D9E75"></i>Crear turno personalizado</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start">
+            <div>
+              <div class="section-title" style="margin-top:0"><i class="ti ti-plus" style="color:#1D9E75"></i>Crear turno personalizado</div>
           <div class="form-row"><label>Sucursal</label>
             <select id="a-branch" onchange="checkDuplicate()"><option>Quilicura</option><option>Santiago Centro</option><option>Lo Barnechea</option><option>La Reina</option></select>
           </div>
@@ -624,6 +618,16 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
           <button class="btn btn-green" id="btn-create" onclick="createShift()"><i class="ti ti-plus" style="margin-right:5px"></i>Crear turno personalizado</button>
           <div class="db-status" id="db-status"></div>
           <div id="dup-warning" style="display:none;margin-top:8px;background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;padding:8px 12px;font-size:12px;color:#991B1B;font-weight:500"><i class="ti ti-alert-triangle" style="margin-right:4px"></i><span id="dup-warning-text"></span></div>
+            </div>
+            <div>
+              <div class="section-title" style="margin-top:0"><i class="ti ti-refresh" style="color:#7C3AED"></i>Sincronizar hoja Inscritos</div>
+              <div style="background:#F3E8FF;border:1px solid #DDD6FE;border-radius:10px;padding:12px">
+                <div style="font-size:11px;color:#6B21A8;margin-bottom:8px;line-height:1.6">Detecta personas que están en los turnos pero no tienen fila en la hoja maestra Inscritos, y las crea automáticamente.</div>
+                <button class="btn" style="background:#7C3AED;color:white;width:100%;font-size:12px;padding:9px" onclick="syncMissingInscritos()"><i class="ti ti-database-import" style="margin-right:4px"></i>Sincronizar Inscritos faltantes</button>
+                <div id="sync-status" style="font-size:12px;margin-top:6px;display:none"></div>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="card" style="overflow-y:auto;max-height:580px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
