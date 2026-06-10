@@ -2003,9 +2003,10 @@ async function enroll(id){
   const cr=hasConflict(myRut,s.shift,s.date);
   if(cr.conflict){showToast(cr.reason,'err');return;}
   if(s.enrolled.length>=s.limit){showToast('No quedan vacantes','err');return;}
-  // Show loading state on button
+  // Anti double-submit
   const btn=document.querySelector(`button[onclick="enroll('${id}')"]`);
-  if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader" style="margin-right:4px"></i>Inscribiendo...';}
+  if(btn&&btn.dataset.busy==='1')return;
+  if(btn){btn.dataset.busy='1';btn.disabled=true;btn.innerHTML='<i class="ti ti-loader" style="margin-right:4px"></i>Inscribiendo...';}
   try{
     const enrolledAt=Date.now();
     const res=await apiCall({action:'enroll',monthKey:currentMonthKey,shiftId:s.id,person:{rut:myRut,name:myName,enrolledAt}});
@@ -2044,7 +2045,8 @@ async function unenroll(id){
   const myE=(s.enrolled||[]).find(e=>e.rut===myRut);if(!myE)return;
   if(tLeft(myE.enrolledAt,s.date)<=0){showToast('Ya no es posible cancelar (menos de 48h para el turno). Contacta al administrador.','err');return;}
   const btn=document.querySelector(`button[onclick="unenroll('${id}')"]`);
-  if(btn){btn.disabled=true;btn.innerHTML='<i class="ti ti-loader" style="margin-right:4px"></i>Cancelando...';}
+  if(btn&&btn.dataset.busy==='1')return;
+  if(btn){btn.dataset.busy='1';btn.disabled=true;btn.innerHTML='<i class="ti ti-loader" style="margin-right:4px"></i>Cancelando...';}
   try{
     const res=await apiCall({action:'unenroll',monthKey:currentMonthKey,shiftId:s.id,rut:myRut});
     if(res&&res.ok){
@@ -2483,7 +2485,7 @@ async function adminEnroll(){
     const res=await apiCall({action:'enroll',monthKey:currentMonthKey,shiftId:s.id,person:{rut:fRut,name,enrolledAt:0}});
     const ok=res&&res.ok;
     if(!ok){
-      // Backend may reject limit=0 shifts; admin bypass: save directly and sync
+      // Backend may reject limit=0 shifts; admin bypass: save directly then force-sync Inscritos
       s.enrolled.push({rut:fRut,name,enrolledAt:0});
       const res2=await apiCall({action:'saveShift',shift:s,monthKey:currentMonthKey});
       if(!res2||!res2.ok){
@@ -2491,6 +2493,11 @@ async function adminEnroll(){
         showToast((res&&res.error)||'Error al inscribir. Intenta nuevamente.','err');
         return;
       }
+      // saveShift saved shift but skips Inscritos — sync it now
+      apiCall({action:'forceSync',monthKey:currentMonthKey,shiftId:s.id,
+        person:{rut:fRut,name,enrolledAt:0},
+        branch:s.branch,shiftType:s.shift,date:fmtDateISO(s.date),horario:getHorario(s)})
+        .catch(function(){});
     } else {
       s.enrolled.push({rut:fRut,name,enrolledAt:0});
     }
