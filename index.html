@@ -629,7 +629,8 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
             </div>
           </div>
         </div>
-        <div class="card" style="overflow-y:auto;max-height:580px">
+        <div class="card" style="overflow-y:auto;max-height:580px;padding-top:0">
+          <div style="position:sticky;top:0;z-index:10;background:white;padding:14px 0 8px;margin-bottom:2px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
             <div class="section-title" style="margin:0"><i class="ti ti-list" style="color:#185FA5"></i>Turnos e inscritos</div>
             <button class="btn btn-outline btn-sm" onclick="loadAndRenderAdmin()"><i class="ti ti-refresh" style="margin-right:4px"></i>Actualizar</button>
@@ -656,6 +657,7 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
               Solo días futuros
             </label>
           </div>
+          </div><!-- end sticky -->
           <div id="admin-roster"></div>
         </div>
       </div>
