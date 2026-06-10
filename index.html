@@ -2415,16 +2415,25 @@ async function adminEnroll(){
   // Admin can enroll even when limit=0 (pre-enrollment for when shift opens)
   if(s.limit>0&&s.enrolled.length>=s.limit){showToast('Turno completo. Aumenta las vacantes primero.','err');return;}
   try{
+    // Try backend enroll (creates Inscritos row); if backend rejects due to limit=0, fallback to saveShift
     const res=await apiCall({action:'enroll',monthKey:currentMonthKey,shiftId:s.id,person:{rut:fRut,name,enrolledAt:0}});
-    if(res&&res.ok){
+    const ok=res&&res.ok;
+    if(!ok){
+      // Backend may reject limit=0 shifts; admin bypass: save directly and sync
       s.enrolled.push({rut:fRut,name,enrolledAt:0});
-      renderAdmin();populateAdminSel();
-      document.getElementById('adm-inp-name').value='';
-      document.getElementById('adm-inp-rut').value='';
-      showToast(`${name} inscrito/a correctamente`,'ok');
-    }else{
-      showToast((res&&res.error)||'Error al inscribir. Intenta nuevamente.','err');
+      const res2=await apiCall({action:'saveShift',shift:s,monthKey:currentMonthKey});
+      if(!res2||!res2.ok){
+        s.enrolled=s.enrolled.filter(e=>e.rut!==fRut);
+        showToast((res&&res.error)||'Error al inscribir. Intenta nuevamente.','err');
+        return;
+      }
+    } else {
+      s.enrolled.push({rut:fRut,name,enrolledAt:0});
     }
+    renderAdmin();populateAdminSel();
+    document.getElementById('adm-inp-name').value='';
+    document.getElementById('adm-inp-rut').value='';
+    showToast(`${name} inscrito/a correctamente`,'ok');
   }catch(e){
     showToast('Error de conexión','err');
   }
