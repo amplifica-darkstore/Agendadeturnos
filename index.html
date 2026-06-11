@@ -993,7 +993,13 @@ function hasConflict(rut,type,date){
   const thisISO=fmtDateISO(date);
 
   // Check across ALL periods (current + cached) to prevent same-day across different events
-  const allShiftsToCheck=[...shifts,...allPeriodsShifts.filter(s=>!shifts.some(x=>x.id===s.id))];
+  // Exclude from allPeriodsShifts any shift whose branch|shift|date is already covered by the
+  // deduplicated shifts array — this prevents secondary/duplicate shift IDs from creating false conflicts
+  const shiftKeys=new Set(shifts.map(function(s){return s.branch+'|'+s.shift+'|'+s.date;}));
+  const allShiftsToCheck=[...shifts,...allPeriodsShifts.filter(function(s){
+    if(shiftKeys.has(s.branch+'|'+s.shift+'|'+s.date))return false;
+    return !shifts.some(function(x){return x.id===s.id;});
+  })];
 
   // Max 1 turno por día — use unique dates to avoid counting duplicates twice
   const enrolledSameDay=allShiftsToCheck.filter(function(s){
