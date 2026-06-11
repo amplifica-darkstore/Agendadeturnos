@@ -2306,16 +2306,25 @@ async function removeEmptyDuplicates(){
   st.style.display='block';st.style.color='#F97316';st.textContent='Limpiando todos los períodos...';
   let totalDeleted=0,totalMerged=0,totalErrors=0,totalNormalized=0;
   try{
-    for(const periodDef of MONTH_DEFS){
-      st.textContent='Analizando '+periodDef.label+'...';
-      const r=await apiCall({action:'getShifts',monthKey:periodDef.key});
-      const all=(r&&r.shifts)||[];
+    // Cargar todos los períodos en paralelo
+    const periodResults=await Promise.all(MONTH_DEFS.map(function(periodDef){
+      return apiCall({action:'getShifts',monthKey:periodDef.key})
+        .then(function(r){return{periodDef,shifts:(r&&r.shifts)||[]};})
+        .catch(function(){return{periodDef,shifts:[]};});
+    }));
+
+    for(const {periodDef,shifts:all} of periodResults){
+      st.textContent='Procesando '+periodDef.label+'...';
       const byKey={};
       all.forEach(function(s){
         const key=s.branch+'|'+s.shift+'|'+fmtDateISO(s.date);
         if(!byKey[key])byKey[key]=[];
         byKey[key].push(s);
       });
+
+      // Separar los que necesitan normalización o merge
+      const toNormalize=[];
+      const toMerge=[];
       for(const group of Object.values(byKey)){
         group.sort(function(a,b){return((b.enrolled||[]).length-(a.enrolled||[]).length)||((b.limit||0)-(a.limit||0));});
         const primary=group[0];
@@ -2323,29 +2332,46 @@ async function removeEmptyDuplicates(){
         const dateChanged=String(primary.date)!==isoDate;
         if(dateChanged)primary.date=isoDate;
         if(group.length<2){
-          if(dateChanged){
-            await apiCall({action:'saveShift',shift:primary,monthKey:periodDef.key});
-            totalNormalized++;
-          }
-          continue;
-        }
-        const secondaries=group.slice(1);
-        const seen=new Set((primary.enrolled||[]).map(function(e){return e.rut;}));
-        secondaries.forEach(function(s){
-          (s.enrolled||[]).forEach(function(e){
-            if(e.rut&&!seen.has(e.rut)){primary.enrolled.push(e);seen.add(e.rut);}
+          if(dateChanged)toNormalize.push({primary,periodDef});
+        }else{
+          const secondaries=group.slice(1);
+          const seen=new Set((primary.enrolled||[]).map(function(e){return e.rut;}));
+          secondaries.forEach(function(s){
+            (s.enrolled||[]).forEach(function(e){
+              if(e.rut&&!seen.has(e.rut)){primary.enrolled.push(e);seen.add(e.rut);}
+            });
           });
-        });
-        const saveRes=await apiCall({action:'saveShift',shift:primary,monthKey:periodDef.key});
-        if(saveRes&&saveRes.ok){
-          totalMerged+=secondaries.reduce(function(n,s){return n+(s.enrolled||[]).length;},0);
-        }else{totalErrors++;continue;}
-        for(const s of secondaries){
-          const res=await apiCall({action:'archiveShift',id:s.id,monthKey:periodDef.key});
-          if(res&&res.ok)totalDeleted++;else totalErrors++;
+          toMerge.push({primary,secondaries,periodDef,mergedCount:secondaries.reduce(function(n,s){return n+(s.enrolled||[]).length;},0)});
         }
       }
+
+      // Guardar primarios (merge + normalización) en paralelo, lotes de 8
+      const allSaves=[
+        ...toNormalize.map(function(x){return{primary:x.primary,periodDef:x.periodDef,isNorm:true};}),
+        ...toMerge.map(function(x){return{primary:x.primary,periodDef:x.periodDef,isNorm:false,secondaries:x.secondaries,mergedCount:x.mergedCount};})
+      ];
+      for(let i=0;i<allSaves.length;i+=8){
+        const batch=allSaves.slice(i,i+8);
+        await Promise.all(batch.map(async function(item){
+          try{
+            const res=await apiCall({action:'saveShift',shift:item.primary,monthKey:item.periodDef.key});
+            if(res&&res.ok){
+              if(item.isNorm){totalNormalized++;}
+              else{
+                totalMerged+=item.mergedCount;
+                // Archivar secundarios en paralelo
+                const archResults=await Promise.all(item.secondaries.map(function(s){
+                  return apiCall({action:'archiveShift',id:s.id,monthKey:item.periodDef.key})
+                    .catch(function(){return null;});
+                }));
+                archResults.forEach(function(r){if(r&&r.ok)totalDeleted++;else totalErrors++;});
+              }
+            }else{totalErrors++;}
+          }catch(e){totalErrors++;}
+        }));
+      }
     }
+
     st.style.color=totalErrors?'#DC2626':'#166534';
     const parts=[];
     if(totalDeleted)parts.push(totalDeleted+' duplicados eliminados');
@@ -2356,7 +2382,7 @@ async function removeEmptyDuplicates(){
       :'✓ No se encontraron duplicados ni fechas por normalizar.';
     st.textContent=msg;
     await loadShifts();renderAdmin();populateAdminSel();
-    setTimeout(function(){st.style.display='none';},6000);
+    setTimeout(function(){st.style.display='none';},8000);
   }catch(e){st.style.color='#DC2626';st.textContent='Error: '+e.toString();}
 }
 
