@@ -2277,46 +2277,47 @@ async function createStandardShifts(){
 
 async function removeEmptyDuplicates(){
   const st=document.getElementById('empty-dup-status');
-  st.style.display='block';st.style.color='#F97316';st.textContent='Analizando turnos...';
+  st.style.display='block';st.style.color='#F97316';st.textContent='Limpiando todos los períodos...';
+  let totalDeleted=0,totalMerged=0,totalErrors=0;
   try{
-    const r=await apiCall({action:'getShifts',monthKey:currentMonthKey});
-    const all=(r&&r.shifts)||[];
-    // Group by branch|shift|normalizedDate
-    const byKey={};
-    all.forEach(function(s){
-      const key=s.branch+'|'+s.shift+'|'+fmtDateISO(s.date);
-      if(!byKey[key])byKey[key]=[];
-      byKey[key].push(s);
-    });
-    let deleted=0,merged=0,errors=0;
-    for(const group of Object.values(byKey)){
-      if(group.length<2)continue;
-      // Sort: most enrolled first, then highest limit
-      group.sort(function(a,b){return((b.enrolled||[]).length-(a.enrolled||[]).length)||((b.limit||0)-(a.limit||0));});
-      const primary=group[0];
-      const secondaries=group.slice(1);
-      // Merge all enrolled from secondaries into primary
-      const seen=new Set((primary.enrolled||[]).map(function(e){return e.rut;}));
-      secondaries.forEach(function(s){
-        (s.enrolled||[]).forEach(function(e){
-          if(e.rut&&!seen.has(e.rut)){primary.enrolled.push(e);seen.add(e.rut);}
-        });
+    for(const periodDef of MONTH_DEFS){
+      st.textContent='Analizando '+periodDef.label+'...';
+      const r=await apiCall({action:'getShifts',monthKey:periodDef.key});
+      const all=(r&&r.shifts)||[];
+      const byKey={};
+      all.forEach(function(s){
+        const key=s.branch+'|'+s.shift+'|'+fmtDateISO(s.date);
+        if(!byKey[key])byKey[key]=[];
+        byKey[key].push(s);
       });
-      // Save primary with merged enrolled
-      const saveRes=await apiCall({action:'saveShift',shift:primary,monthKey:currentMonthKey});
-      if(saveRes&&saveRes.ok){
-        merged+=secondaries.reduce(function(n,s){return n+(s.enrolled||[]).length;},0);
-      }else{errors++;continue;}
-      // Archive secondaries
-      for(const s of secondaries){
-        const res=await apiCall({action:'archiveShift',id:s.id,monthKey:currentMonthKey});
-        if(res&&res.ok)deleted++;else errors++;
+      for(const group of Object.values(byKey)){
+        if(group.length<2)continue;
+        group.sort(function(a,b){return((b.enrolled||[]).length-(a.enrolled||[]).length)||((b.limit||0)-(a.limit||0));});
+        const primary=group[0];
+        const secondaries=group.slice(1);
+        const seen=new Set((primary.enrolled||[]).map(function(e){return e.rut;}));
+        secondaries.forEach(function(s){
+          (s.enrolled||[]).forEach(function(e){
+            if(e.rut&&!seen.has(e.rut)){primary.enrolled.push(e);seen.add(e.rut);}
+          });
+        });
+        const saveRes=await apiCall({action:'saveShift',shift:primary,monthKey:periodDef.key});
+        if(saveRes&&saveRes.ok){
+          totalMerged+=secondaries.reduce(function(n,s){return n+(s.enrolled||[]).length;},0);
+        }else{totalErrors++;continue;}
+        for(const s of secondaries){
+          const res=await apiCall({action:'archiveShift',id:s.id,monthKey:periodDef.key});
+          if(res&&res.ok)totalDeleted++;else totalErrors++;
+        }
       }
     }
-    if(!deleted&&!merged){st.style.color='#166534';st.textContent='✓ No hay turnos duplicados.';return;}
-    st.style.color=errors?'#DC2626':'#166534';
-    st.textContent='✓ '+deleted+' duplicados eliminados, '+merged+' inscritos fusionados'+(errors?' · '+errors+' errores':'')+'.';
+    st.style.color=totalErrors?'#DC2626':'#166534';
+    const msg=totalDeleted||totalMerged
+      ?'✓ '+totalDeleted+' duplicados eliminados, '+totalMerged+' inscritos fusionados'+(totalErrors?' · '+totalErrors+' errores':'')+'.'
+      :'✓ No se encontraron duplicados en ningún período.';
+    st.textContent=msg;
     await loadShifts();renderAdmin();populateAdminSel();
+    setTimeout(function(){st.style.display='none';},6000);
   }catch(e){st.style.color='#DC2626';st.textContent='Error: '+e.toString();}
 }
 
