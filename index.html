@@ -1740,7 +1740,7 @@ async function loadAllPeriodsCache(){
   if(!myRut){allPeriodsShifts=[];return;}
   try{
     const todayISO=(function(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
-    const relevantPeriods=MONTH_DEFS.filter(function(m){return m.dateFrom<=todayISO;});
+    const relevantPeriods=MONTH_DEFS.filter(function(m){return m.dateFrom<=todayISO&&m.key!==currentMonthKey;});
     const results=await Promise.all(relevantPeriods.map(function(m){
       return apiCall({action:'getShifts',monthKey:m.key}).then(function(r){
         return((r&&r.shifts)||[]).filter(function(s){
