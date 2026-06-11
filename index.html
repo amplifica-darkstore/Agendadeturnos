@@ -1681,9 +1681,10 @@ async function loadShifts(){
         const key=s.branch+'|'+s.shift+'|'+s.date;
         const existing=byKey[key];
         if(!existing){byKey[key]=s;return;}
-        // Merge: add people from secondary shift that aren't in primary
-        const primary=s.enrolled.length>=existing.enrolled.length?s:existing;
-        const secondary=s.enrolled.length>=existing.enrolled.length?existing:s;
+        // Merge: prefer shift with more enrolled; on tie prefer higher limit (avoids keeping limit=0 placeholder)
+        const sPrimary=s.enrolled.length>existing.enrolled.length||(s.enrolled.length===existing.enrolled.length&&s.limit>=existing.limit);
+        const primary=sPrimary?s:existing;
+        const secondary=sPrimary?existing:s;
         const seen=new Set(primary.enrolled.map(function(e){return e.rut;}));
         secondary.enrolled.forEach(function(e){
           if(e.rut&&!seen.has(e.rut)){primary.enrolled.push(e);seen.add(e.rut);}
