@@ -1986,18 +1986,6 @@ function refreshTimers(){
   });
 }
 
-// Sync inscription to inscritos sheet (master attendance sheet) with 1 retry
-function syncInscritos(monthKey,shiftId,rut){
-  apiCall({action:'updateAttendance',monthKey,shiftId,rut,asistio:'',pago:''})
-    .then(function(r){if(!r||!r.ok)console.warn('syncInscritos failed, retrying...',r);})
-    .catch(function(){
-      // Retry once after 3 seconds
-      setTimeout(function(){
-        apiCall({action:'updateAttendance',monthKey,shiftId,rut,asistio:'',pago:''})
-          .catch(function(e){console.error('syncInscritos retry failed:',e);});
-      },3000);
-    });
-}
 
 async function enroll(id){
   const s=shifts.find(x=>x.id===id);
@@ -2420,10 +2408,10 @@ async function adminDelShift(id){
 
 async function adminDelPerson(shiftId,rut){
   const s=shifts.find(x=>x.id===shiftId);if(!s)return;
-  s.enrolled=(s.enrolled||[]).filter(e=>e.rut!==rut);
   try{
-    const res=await apiCall({action:'saveShift',shift:s,monthKey:currentMonthKey});
+    const res=await apiCall({action:'unenroll',monthKey:currentMonthKey,shiftId,rut});
     if(res&&res.ok){
+      s.enrolled=(s.enrolled||[]).filter(e=>e.rut!==rut);
       renderAdmin();populateAdminSel();
       showToast('Persona eliminada del turno','info');
     }else{
