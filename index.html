@@ -1994,7 +1994,9 @@ function shiftCardCompact(s){
 // Returns ms remaining to cancel: positive = can still cancel, negative = locked
 function tLeft(enrolledAt, shiftDateISO){
   if(!shiftDateISO) return -1;
-  const shiftMs=new Date(shiftDateISO+'T00:00:00').getTime();
+  const dt=parseDate(shiftDateISO);
+  if(!dt)return -1;
+  const shiftMs=dt.getTime();
   const window48h=shiftMs - CANCEL_HOURS*3600*1000 - Date.now();
   // Grace period: always allow 1h after enrollment even if 48h window passed
   if(enrolledAt){
