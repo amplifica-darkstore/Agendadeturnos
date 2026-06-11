@@ -775,7 +775,7 @@ const SHIFT_HOURS={AM:'07:30 – 17:30',PM:'12:00 – 22:00',Nocturno:'21:30 –
 
 // ── Períodos mensuales ────────────────────────────────────────
 const MONTH_DEFS = [
-  { key:'cyber-jun-2026', label:'Cyber Junio 2026',  evento:1, isCyber:true,  month:6, year:2026, dateFrom:'2026-05-25', dateTo:'2026-06-08' },
+  { key:'cyber-jun-2026', label:'Cyber Junio 2026',  evento:1, isCyber:true,  month:6, year:2026, dateFrom:'2026-05-25', dateTo:'2026-06-07' },
   { key:'jun-2026',       label:'Junio 2026',         evento:2, isCyber:false, month:6, year:2026, dateFrom:'2026-06-08', dateTo:'2026-06-30' },
   { key:'jul-2026',       label:'Julio 2026',          evento:3, isCyber:false, month:7, year:2026, dateFrom:'2026-07-01', dateTo:'2026-07-31' },
   { key:'ago-2026',       label:'Agosto 2026',         evento:4, isCyber:false, month:8, year:2026, dateFrom:'2026-08-01', dateTo:'2026-08-31' },
@@ -1009,8 +1009,6 @@ function hasConflict(rut,type,date){
   });
   if(enrolledSameDay.length>0){
     const ex=enrolledSameDay[0];
-    console.warn('[CONFLICT-DEBUG] rut='+rut+' date='+thisISO+' blocked by shift:',JSON.stringify({id:ex.id,branch:ex.branch,shift:ex.shift,date:ex.date,dateISO:fmtDateISO(ex.date),enrolledRuts:(ex.enrolled||[]).map(function(e){return e.rut;})}));
-    console.warn('[CONFLICT-DEBUG] allShiftsToCheck count='+allShiftsToCheck.length+', shifts count='+shifts.length+', allPeriodsShifts count='+allPeriodsShifts.length);
     const exDesc=ex.branch?(ex.branch+(ex.shift&&ex.shift!=='Estándar'?' · '+ex.shift:'')):ex.shift||'';
     return{conflict:true,reason:'Ya tienes turno el '+fmtDate(thisISO)+(exDesc?' en '+exDesc:'')};
   }
@@ -1709,8 +1707,6 @@ async function loadShifts(){
       if(da<db)return -1;if(da>db)return 1;
       return SHIFTS_ORDER.indexOf(a.shift)-SHIFTS_ORDER.indexOf(b.shift);
     });
-    console.log('[LOAD-DEBUG] shifts loaded:',shifts.length,'unique dates:',new Set(shifts.map(function(s){return s.date;})).size);
-    shifts.forEach(function(s){if((s.enrolled||[]).length>0)console.log('[LOAD-DEBUG] shift',s.id,s.branch,s.shift,s.date,'enrolled:',(s.enrolled||[]).map(function(e){return e.rut;}).join(','));});
   }catch(e){console.error('loadShifts:',e);shifts=[];}
 }
 async function saveShift(s){
