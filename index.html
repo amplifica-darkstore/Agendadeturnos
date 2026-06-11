@@ -996,11 +996,14 @@ function hasConflict(rut,type,date){
   const allShiftsToCheck=[...shifts,...allPeriodsShifts.filter(s=>!shifts.some(x=>x.id===s.id))];
 
   // Max 1 turno por día — use unique dates to avoid counting duplicates twice
-  const enrolledDates=new Set(allShiftsToCheck
-    .filter(function(s){return(s.enrolled||[]).some(function(e){return e.rut===rut;});})
-    .map(function(s){return fmtDateISO(s.date);}));
-  if(enrolledDates.has(thisISO))
-    return{conflict:true,reason:'Ya tienes un turno ese día (máx. 1 por día)'};
+  const enrolledSameDay=allShiftsToCheck.filter(function(s){
+    return fmtDateISO(s.date)===thisISO&&(s.enrolled||[]).some(function(e){return e.rut===rut;});
+  });
+  if(enrolledSameDay.length>0){
+    const ex=enrolledSameDay[0];
+    const exDesc=ex.branch?(ex.branch+(ex.shift&&ex.shift!=='Estándar'?' · '+ex.shift:'')):ex.shift||'';
+    return{conflict:true,reason:'Ya tienes turno el '+fmtDate(thisISO)+(exDesc?' en '+exDesc:'')};
+  }
 
   // Max 5 turnos por semana — count unique DATES (not shifts, to avoid double-counting duplicates)
   const isoWeek=function(d){const j=new Date(d.getFullYear(),0,1);return Math.ceil(((d-j)/86400000+j.getDay()+1)/7);};
