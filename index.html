@@ -1748,7 +1748,21 @@ async function loadAllPeriodsCache(){
         }).map(function(s){return{id:s.id,branch:s.branch,shift:s.shift,date:fmtDateISO(s.date),enrolled:s.enrolled||[]};});
       }).catch(function(){return[];});
     }));
-    allPeriodsShifts=results.reduce(function(a,b){return a.concat(b);},[]);
+    const raw=results.reduce(function(a,b){return a.concat(b);},[]);
+    var byKey={};
+    raw.forEach(function(s){
+      var key=s.branch+'|'+s.shift+'|'+s.date;
+      var existing=byKey[key];
+      if(!existing){byKey[key]=s;return;}
+      var primary=s.enrolled.length>=existing.enrolled.length?s:existing;
+      var secondary=s.enrolled.length>=existing.enrolled.length?existing:s;
+      var seen=new Set(primary.enrolled.map(function(e){return e.rut;}));
+      secondary.enrolled.forEach(function(e){
+        if(e.rut&&!seen.has(e.rut)){primary.enrolled.push(e);seen.add(e.rut);}
+      });
+      byKey[key]=primary;
+    });
+    allPeriodsShifts=Object.values(byKey);
   }catch(e){allPeriodsShifts=[];}
 }
 
@@ -2521,7 +2535,9 @@ async function adminEnroll(){
   if(!s.enrolled)s.enrolled=[];
   if(s.enrolled.some(e=>e.rut===fRut)){showToast('Ya está inscrita en ese turno','err');return;}
   const acr=hasConflict(fRut,s.shift,s.date);
-  if(acr.conflict){showToast(acr.reason,'err');return;}
+  if(acr.conflict){
+    if(!confirm('⚠ Conflicto detectado: '+acr.reason+'\n\n¿Inscribir de todas formas? (Admin override)')){return;}
+  }
   // Admin can enroll even when limit=0 (pre-enrollment for when shift opens)
   if(s.limit>0&&s.enrolled.length>=s.limit){showToast('Turno completo. Aumenta las vacantes primero.','err');return;}
   try{
