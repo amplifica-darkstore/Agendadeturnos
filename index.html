@@ -1732,11 +1732,14 @@ async function loadAndRenderWorker(){
   clearInterval(timerInterval);timerInterval=setInterval(refreshTimers,30000);
 }
 
-// Load enrolled shifts from ALL periods into allPeriodsShifts for cross-period conflict check
+// Load enrolled shifts from relevant periods into allPeriodsShifts for cross-period conflict check
+// Only loads periods that started on or before today (not future empty periods)
 async function loadAllPeriodsCache(){
-  if(!myRut)return;
+  if(!myRut){allPeriodsShifts=[];return;}
   try{
-    const results=await Promise.all(MONTH_DEFS.map(function(m){
+    const todayISO=(function(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');})();
+    const relevantPeriods=MONTH_DEFS.filter(function(m){return m.dateFrom<=todayISO;});
+    const results=await Promise.all(relevantPeriods.map(function(m){
       return apiCall({action:'getShifts',monthKey:m.key}).then(function(r){
         return((r&&r.shifts)||[]).filter(function(s){
           return(s.enrolled||[]).some(function(e){return e.rut===myRut;});
@@ -1749,15 +1752,20 @@ async function loadAllPeriodsCache(){
 
 function renderMisTurnos(){
   const today=new Date();today.setHours(0,0,0,0);
-  // Combine current period shifts + cross-period enrolled shifts, deduped by id
-  const seen=new Set();
+  // Combine current period shifts + cross-period enrolled shifts
+  // Dedup by both ID and branch|shift|date to avoid showing same shift twice
+  const seenId=new Set();
+  const seenKey=new Set();
   const allMine=[];
   [...shifts,...allPeriodsShifts].forEach(function(s){
-    if(seen.has(s.id))return;
+    if(seenId.has(s.id))return;
+    const key=s.branch+'|'+s.shift+'|'+fmtDateISO(s.date);
+    if(seenKey.has(key))return;
     if(!(s.enrolled||[]).some(function(e){return e.rut===myRut;}))return;
     const sd=parseDate(s.date);
     if(!sd||sd<today)return;
-    seen.add(s.id);
+    seenId.add(s.id);
+    seenKey.add(key);
     allMine.push(s);
   });
   const misTurnos=allMine;
@@ -1766,8 +1774,8 @@ function renderMisTurnos(){
   if(!misTurnos.length){section.style.display='none';return;}
   section.style.display='block';
 
-  const CARD_BG={AM:'linear-gradient(135deg,#F0FDF4,#DCFCE7)',PM:'linear-gradient(135deg,#FFFBEB,#FEF3C7)',Nocturno:'linear-gradient(135deg,#F5F3FF,#EDE9FE)'};
-  const CARD_BORDER={AM:'#86EFAC',PM:'#FDE68A',Nocturno:'#C4B5FD'};
+  const CARD_BG={AM:'linear-gradient(135deg,#F0FDF4,#DCFCE7)',PM:'linear-gradient(135deg,#FFFBEB,#FEF3C7)',Nocturno:'linear-gradient(135deg,#F5F3FF,#EDE9FE)','Estándar':'linear-gradient(135deg,#F0F9FF,#E0F2FE)'};
+  const CARD_BORDER={AM:'#86EFAC',PM:'#FDE68A',Nocturno:'#C4B5FD','Estándar':'#7DD3FC'};
 
   // Group by date
   const byDate={};
@@ -1790,9 +1798,11 @@ function renderMisTurnos(){
             const left=myE?tLeft(myE.enrolledAt,s.date):-1;
             const canCancel=left>0;
             const hrs=canCancel?Math.ceil(left/3600000):0;
-            return `<div style="background:${CARD_BG[s.shift]};border:1.5px solid ${CARD_BORDER[s.shift]};border-radius:12px;padding:10px 12px">
+            const bg=CARD_BG[s.shift]||'linear-gradient(135deg,#F8FAFC,#F1F5F9)';
+            const border=CARD_BORDER[s.shift]||'#CBD5E1';
+            return `<div style="background:${bg};border:1.5px solid ${border};border-radius:12px;padding:10px 12px">
               <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
-                <span class="badge ${SHIFT_BADGE[s.shift]}">${s.shift}</span>
+                <span class="badge ${SHIFT_BADGE[s.shift]||''}">${s.shift}</span>
                 <span style="font-size:10px;color:#475569;font-weight:600">${getHorario(s)}</span>
               </div>
               <div style="font-size:11px;color:#475569;font-weight:600;margin-bottom:6px"><i class="ti ti-building-store" style="font-size:11px;margin-right:3px"></i>${s.branch}</div>
