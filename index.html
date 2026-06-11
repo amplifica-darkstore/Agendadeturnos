@@ -1710,6 +1710,7 @@ async function loadShifts(){
   }catch(e){console.error('loadShifts:',e);shifts=[];}
 }
 async function saveShift(s){
+  s.date=fmtDateISO(s.date);
   await apiCall({action:'saveShift',shift:s,monthKey:currentMonthKey});
 }
 async function delShift(id){
@@ -2289,7 +2290,7 @@ async function createStandardShifts(){
 async function removeEmptyDuplicates(){
   const st=document.getElementById('empty-dup-status');
   st.style.display='block';st.style.color='#F97316';st.textContent='Limpiando todos los períodos...';
-  let totalDeleted=0,totalMerged=0,totalErrors=0;
+  let totalDeleted=0,totalMerged=0,totalErrors=0,totalNormalized=0;
   try{
     for(const periodDef of MONTH_DEFS){
       st.textContent='Analizando '+periodDef.label+'...';
@@ -2302,9 +2303,18 @@ async function removeEmptyDuplicates(){
         byKey[key].push(s);
       });
       for(const group of Object.values(byKey)){
-        if(group.length<2)continue;
         group.sort(function(a,b){return((b.enrolled||[]).length-(a.enrolled||[]).length)||((b.limit||0)-(a.limit||0));});
         const primary=group[0];
+        const isoDate=fmtDateISO(primary.date);
+        const dateChanged=String(primary.date)!==isoDate;
+        if(dateChanged)primary.date=isoDate;
+        if(group.length<2){
+          if(dateChanged){
+            await apiCall({action:'saveShift',shift:primary,monthKey:periodDef.key});
+            totalNormalized++;
+          }
+          continue;
+        }
         const secondaries=group.slice(1);
         const seen=new Set((primary.enrolled||[]).map(function(e){return e.rut;}));
         secondaries.forEach(function(s){
@@ -2323,9 +2333,13 @@ async function removeEmptyDuplicates(){
       }
     }
     st.style.color=totalErrors?'#DC2626':'#166534';
-    const msg=totalDeleted||totalMerged
-      ?'✓ '+totalDeleted+' duplicados eliminados, '+totalMerged+' inscritos fusionados'+(totalErrors?' · '+totalErrors+' errores':'')+'.'
-      :'✓ No se encontraron duplicados en ningún período.';
+    const parts=[];
+    if(totalDeleted)parts.push(totalDeleted+' duplicados eliminados');
+    if(totalMerged)parts.push(totalMerged+' inscritos fusionados');
+    if(totalNormalized)parts.push(totalNormalized+' fechas normalizadas');
+    if(totalErrors)parts.push(totalErrors+' errores');
+    const msg=parts.length?'✓ '+parts.join(', ')+'.'
+      :'✓ No se encontraron duplicados ni fechas por normalizar.';
     st.textContent=msg;
     await loadShifts();renderAdmin();populateAdminSel();
     setTimeout(function(){st.style.display='none';},6000);
