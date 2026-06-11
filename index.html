@@ -618,6 +618,8 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
           <button class="btn btn-green" id="btn-create" onclick="createShift()"><i class="ti ti-plus" style="margin-right:5px"></i>Crear turno personalizado</button>
           <div class="db-status" id="db-status"></div>
           <div id="dup-warning" style="display:none;margin-top:8px;background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;padding:8px 12px;font-size:12px;color:#991B1B;font-weight:500"><i class="ti ti-alert-triangle" style="margin-right:4px"></i><span id="dup-warning-text"></span></div>
+          <button class="btn btn-sm" style="background:#F97316;color:white;margin-top:8px;width:100%;padding:8px" onclick="removeEmptyDuplicates()"><i class="ti ti-eraser" style="margin-right:4px"></i>Eliminar turnos vacíos duplicados</button>
+          <div id="empty-dup-status" style="font-size:11px;margin-top:4px;display:none"></div>
             </div>
           </div>
         </div>
@@ -2263,6 +2265,42 @@ async function createStandardShifts(){
   setTimeout(()=>{status.style.display='none';},5000);
 }
 
+
+async function removeEmptyDuplicates(){
+  const st=document.getElementById('empty-dup-status');
+  st.style.display='block';st.style.color='#F97316';st.textContent='Buscando...';
+  try{
+    const r=await apiCall({action:'getShifts',monthKey:currentMonthKey});
+    const all=(r&&r.shifts)||[];
+    // Group by branch|shift|normalizedDate
+    const byKey={};
+    all.forEach(function(s){
+      const key=s.branch+'|'+s.shift+'|'+fmtDateISO(s.date);
+      if(!byKey[key])byKey[key]=[];
+      byKey[key].push(s);
+    });
+    // Find empty shifts that have a non-empty duplicate
+    const toDelete=[];
+    Object.values(byKey).forEach(function(group){
+      if(group.length<2)return;
+      const hasReal=group.some(function(s){return(s.enrolled||[]).length>0;});
+      if(!hasReal)return;
+      group.forEach(function(s){
+        if((s.enrolled||[]).length===0)toDelete.push(s.id);
+      });
+    });
+    if(!toDelete.length){st.style.color='#166534';st.textContent='✓ No hay turnos vacíos duplicados.';return;}
+    st.textContent='Eliminando '+toDelete.length+' turnos vacíos...';
+    let deleted=0,errors=0;
+    for(const id of toDelete){
+      const res=await apiCall({action:'archiveShift',id,monthKey:currentMonthKey});
+      if(res&&res.ok)deleted++;else errors++;
+    }
+    st.style.color=errors?'#DC2626':'#166534';
+    st.textContent='✓ '+deleted+' turnos vacíos eliminados'+(errors?' · '+errors+' errores':'')+'.';
+    await loadShifts();renderAdmin();populateAdminSel();
+  }catch(e){st.style.color='#DC2626';st.textContent='Error: '+e.toString();}
+}
 
 async function closeAllVacantesNow(){
   if(!confirm('¿Cerrar TODOS los turnos del período a 0 vacantes?'))return;
