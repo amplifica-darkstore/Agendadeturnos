@@ -1021,7 +1021,10 @@ function hasConflict(rut,type,date){
     const sd=parseShiftDate(s.date);
     return isoWeek(sd)===tWeek&&sd.getFullYear()===tYear;
   }).map(function(s){return fmtDateISO(s.date);}));
-  if(weekDates.size>=5)return{conflict:true,reason:'Ya tienes 5 turnos esta semana (máximo permitido)'};
+  if(weekDates.size>=5){
+    const dateList=[...weekDates].sort().map(function(d){const dt=parseDate(d);return dt?DAYS[dt.getDay()]+' '+dt.getDate():d;}).join(', ');
+    return{conflict:true,reason:'Máximo 5 turnos por semana. Ya tienes: '+dateList};
+  }
 
   // Same-day overlaps: AM+PM, PM+Nocturno
   const overlaps={AM:['PM'],PM:['AM','Nocturno'],Nocturno:['PM']};
@@ -1745,13 +1748,19 @@ async function loadAllPeriodsCache(){
 }
 
 function renderMisTurnos(){
-  // Only show upcoming enrolled shifts (today and future) in this widget
   const today=new Date();today.setHours(0,0,0,0);
-  const misTurnos=shifts.filter(s=>{
-    if(!(s.enrolled||[]).some(e=>e.rut===myRut))return false;
+  // Combine current period shifts + cross-period enrolled shifts, deduped by id
+  const seen=new Set();
+  const allMine=[];
+  [...shifts,...allPeriodsShifts].forEach(function(s){
+    if(seen.has(s.id))return;
+    if(!(s.enrolled||[]).some(function(e){return e.rut===myRut;}))return;
     const sd=parseDate(s.date);
-    return sd&&sd>=today;
+    if(!sd||sd<today)return;
+    seen.add(s.id);
+    allMine.push(s);
   });
+  const misTurnos=allMine;
   const section=document.getElementById('mis-turnos-section');
   const cont=document.getElementById('mis-turnos-content');
   if(!misTurnos.length){section.style.display='none';return;}
