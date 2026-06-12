@@ -3188,6 +3188,16 @@ function exportEvalExcel(){
   showToast('Excel de evaluaciones descargado','ok');
 }
 
+function normalizeAsistio(val){
+  if(!val)return'Pendiente';
+  var v=String(val).trim().toUpperCase();
+  if(v==='SI'||v==='SÍ'||v==='S')return'Sí';
+  if(v==='NO'||v==='N')return'No';
+  if(v==='CANCELADO')return'Cancelado';
+  if(v==='PENDIENTE'||v==='')return'Pendiente';
+  return String(val).trim();
+}
+
 // ── Payment Report ──────────────────────────────────────────
 let pagosData=[];
 async function loadAndRenderPagos(){
@@ -3225,7 +3235,7 @@ async function loadAndRenderPagos(){
       people[e.rut].shifts.push({
         branch:s.branch,shift:s.shift,date:fmtDateISO(s.date),
         horario:getHorario(s),periodKey:s._periodKey,periodLabel:s._periodLabel,
-        asistio:e.asistio||'Pendiente',pago:e.pago||'Pendiente'
+        asistio:normalizeAsistio(e.asistio),pago:e.pago||'Pendiente'
       });
     });
   });
