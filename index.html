@@ -219,6 +219,7 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
             <button class="tab active" id="tab-admin" onclick="goTab('admin',event)" style="display:none"><i class="ti ti-settings" style="font-size:13px;margin-right:4px"></i>Admin</button>
             <div id="topbar-period-dropdown" style="display:none"></div>
             <button class="tab" id="tab-overview" onclick="goTab('overview',event)" style="display:none"><i class="ti ti-table" style="font-size:13px;margin-right:4px"></i>Resumen</button>
+            <button class="tab" id="tab-pagos" onclick="goTab('pagos',event)" style="display:none"><i class="ti ti-cash" style="font-size:13px;margin-right:4px"></i>Pagos</button>
           </div>
         </div>
       </div>
@@ -531,6 +532,29 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
     </div>
     <div id="loading-overview" class="loading" style="display:none"><i class="ti ti-refresh"></i>Cargando...</div>
     <div id="overview-content"></div>
+  </div>
+
+  <div id="page-pagos" class="page">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <h2 style="font-size:15px;font-weight:700;color:#1E293B"><i class="ti ti-cash" style="margin-right:6px;color:#185FA5"></i>Reporte de pagos</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-outline btn-sm" onclick="loadAndRenderPagos()"><i class="ti ti-refresh" style="margin-right:4px"></i>Actualizar</button>
+        <button class="btn btn-sm" onclick="exportPagosExcel()" style="background:linear-gradient(135deg,#166534,#059669);color:white;border:none;display:flex;align-items:center;gap:5px"><i class="ti ti-file-spreadsheet" style="font-size:14px"></i>Descargar Excel</button>
+      </div>
+    </div>
+    <div style="background:white;border-radius:14px;border:1px solid #E2E8F0;padding:14px 16px;margin-bottom:16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <i class="ti ti-filter" style="color:#185FA5;font-size:16px"></i>
+      <select id="pagos-period" onchange="renderPagos()" style="padding:7px 10px;border:1.5px solid #185FA5;border-radius:10px;font-size:12px;background:#EFF6FF;color:#1E40AF;font-family:'DM Sans',sans-serif;font-weight:700">
+        <option value="">Todos los periodos</option>
+      </select>
+      <select id="pagos-branch" onchange="renderPagos()" style="padding:7px 10px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:12px;background:white;color:#1E293B;font-family:'DM Sans',sans-serif;font-weight:500">
+        <option value="">Todas las sucursales</option>
+        <option>Quilicura</option><option>Santiago Centro</option><option>Lo Barnechea</option><option>La Reina</option>
+      </select>
+      <input type="text" id="pagos-search" oninput="renderPagos()" placeholder="Buscar nombre o RUT..." style="flex:1;min-width:180px;padding:7px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:12px;font-family:'DM Sans',sans-serif">
+    </div>
+    <div id="loading-pagos" class="loading" style="display:none"><i class="ti ti-refresh"></i>Cargando todos los periodos...</div>
+    <div id="pagos-content"></div>
   </div>
 
   <div id="page-admin" class="page">
@@ -1443,6 +1467,7 @@ function openWorkerPage(){
   document.getElementById('tab-history').style.display='flex';
   document.getElementById('tab-admin').style.display='none';
   document.getElementById('tab-overview').style.display='none';
+  document.getElementById('tab-pagos').style.display='none';
   const tpd=document.getElementById('topbar-period-dropdown');if(tpd){tpd.style.display='none';tpd.innerHTML='';}
   document.getElementById('topbar-actions').innerHTML='';
   document.getElementById('w-name-display').textContent=myName;
@@ -1468,6 +1493,7 @@ function previewWorkerView(){
   document.getElementById('tab-admin').style.display='flex';
   document.getElementById('tab-admin').classList.remove('active');
   document.getElementById('tab-overview').style.display='none';
+  document.getElementById('tab-pagos').style.display='none';
   const tpd=document.getElementById('topbar-period-dropdown');if(tpd){tpd.style.display='none';tpd.innerHTML='';}
   document.getElementById('topbar-actions').innerHTML=`
     <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:12px;font-weight:700;background:#F5C800;color:#1a1a6e;border:none">
@@ -1489,6 +1515,7 @@ function openAdminPage(){
   document.getElementById('tab-admin').style.display='flex';
   document.getElementById('tab-admin').classList.add('active');
   document.getElementById('tab-overview').style.display='flex';
+  document.getElementById('tab-pagos').style.display='flex';
   document.getElementById('tab-worker').style.display='none';
   document.getElementById('tab-history').style.display='none';
   renderAdminTopbarActions();
@@ -1620,7 +1647,7 @@ function goTab(tab,e){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   e.target.closest('.tab').classList.add('active');
   if(tab==='worker'){
-    if(myRole==='admin'){myRole='';myRut='';myName='';try{localStorage.removeItem('cj26_role');}catch(e){}document.getElementById('topbar-actions').innerHTML='';document.getElementById('tab-overview').style.display='none';allPages('page-login');return;}
+    if(myRole==='admin'){myRole='';myRut='';myName='';try{localStorage.removeItem('cj26_role');}catch(e){}document.getElementById('topbar-actions').innerHTML='';document.getElementById('tab-overview').style.display='none';document.getElementById('tab-pagos').style.display='none';allPages('page-login');return;}
     if(!myRut){allPages('page-login');return;}
     allPages('page-worker');loadAndRenderWorker();
   }else if(tab==='admin'){
@@ -1633,6 +1660,9 @@ function goTab(tab,e){
     if(!myRut)return;
     allPages('page-history');
     renderHistory();
+  }else if(tab==='pagos'){
+    if(myRole!=='admin')return;
+    allPages('page-pagos');loadAndRenderPagos();
   }
 }
 
@@ -1646,7 +1676,7 @@ function logout(){
   document.getElementById('btn-role-worker').classList.remove('selected');document.getElementById('btn-role-admin').classList.remove('selected');
   document.getElementById('topbar-actions').innerHTML='';
   const tpd=document.getElementById('topbar-period-dropdown');if(tpd){tpd.style.display='none';tpd.innerHTML='';}
-  ['tab-worker','tab-history','tab-admin','tab-overview'].forEach(function(id){
+  ['tab-worker','tab-history','tab-admin','tab-overview','tab-pagos'].forEach(function(id){
     const el=document.getElementById(id);
     if(el){el.style.display='none';el.classList.remove('active');}
   });
@@ -2682,6 +2712,7 @@ function selectPeriod(key){
   document.getElementById('btn-role-admin').classList.remove('selected');
   document.getElementById('tab-history').style.display='none';
   document.getElementById('tab-overview').style.display='none';
+  document.getElementById('tab-pagos').style.display='none';
   document.getElementById('topbar-actions').innerHTML='';
   allPages('page-login');
   populateDates();
@@ -2957,6 +2988,155 @@ async function changeBlockType(btn){
   finally{btn.disabled=false;}
 }
 
+
+// ── Payment Report ──────────────────────────────────────────
+let pagosData=[];
+async function loadAndRenderPagos(){
+  document.getElementById('loading-pagos').style.display='block';
+  document.getElementById('pagos-content').innerHTML='';
+  var allShifts=[];
+  try{
+    var results=await Promise.all(MONTH_DEFS.map(function(m){
+      return apiCall({action:'getShifts',monthKey:m.key}).then(function(r){
+        var list=(r&&r.shifts)||[];
+        return list.map(function(s){
+          var iso=fmtDateISO(s.date);
+          var def=MONTH_DEFS.slice().reverse().find(function(d){return iso>=d.dateFrom&&iso<=d.dateTo;});
+          return Object.assign({},s,{_periodKey:def?def.key:m.key,_periodLabel:def?def.label:m.label});
+        });
+      }).catch(function(){return[];});
+    }));
+    results.forEach(function(arr){allShifts=allShifts.concat(arr);});
+  }catch(e){}
+  // Dedup by branch|shift|date
+  var byKey={};
+  allShifts.forEach(function(s){
+    var k=s.branch+'|'+s.shift+'|'+fmtDateISO(s.date);
+    var ex=byKey[k];
+    if(!ex||(s.enrolled||[]).length>(ex.enrolled||[]).length) byKey[k]=s;
+  });
+  allShifts=Object.values(byKey);
+  // Build per-person data
+  var people={};
+  allShifts.forEach(function(s){
+    (s.enrolled||[]).forEach(function(e){
+      if(!e.rut)return;
+      if(!people[e.rut]) people[e.rut]={name:e.name,rut:e.rut,shifts:[]};
+      if(e.name&&e.name.length>people[e.rut].name.length) people[e.rut].name=e.name;
+      people[e.rut].shifts.push({branch:s.branch,shift:s.shift,date:fmtDateISO(s.date),horario:getHorario(s),periodKey:s._periodKey,periodLabel:s._periodLabel});
+    });
+  });
+  pagosData=Object.values(people).sort(function(a,b){return a.name.localeCompare(b.name);});
+  // Populate period filter
+  var sel=document.getElementById('pagos-period');
+  var opts='<option value="">Todos los periodos</option>';
+  MONTH_DEFS.forEach(function(m){opts+='<option value="'+m.key+'">'+m.label+'</option>';});
+  sel.innerHTML=opts;
+  document.getElementById('loading-pagos').style.display='none';
+  renderPagos();
+}
+
+function renderPagos(){
+  var cont=document.getElementById('pagos-content');
+  var periodFilter=document.getElementById('pagos-period').value;
+  var branchFilter=document.getElementById('pagos-branch').value;
+  var search=(document.getElementById('pagos-search').value||'').toLowerCase().trim();
+  var filtered=pagosData.map(function(p){
+    var sh=p.shifts.filter(function(s){
+      if(periodFilter&&s.periodKey!==periodFilter)return false;
+      if(branchFilter&&s.branch!==branchFilter)return false;
+      return true;
+    });
+    return {name:p.name,rut:p.rut,shifts:sh};
+  }).filter(function(p){
+    if(!p.shifts.length)return false;
+    if(search&&p.name.toLowerCase().indexOf(search)===-1&&p.rut.toLowerCase().indexOf(search)===-1)return false;
+    return true;
+  });
+  if(!filtered.length){cont.innerHTML='<div class="loading" style="text-align:center;padding:24px"><i class="ti ti-users-minus" style="font-size:32px;display:block;margin-bottom:8px;color:#94A3B8"></i><p style="color:#64748B">No se encontraron personas con turnos.</p></div>';return;}
+  // Summary stats
+  var totalPeople=filtered.length;
+  var totalShifts=filtered.reduce(function(a,p){return a+p.shifts.length;},0);
+  var html='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px">';
+  html+='<div style="background:white;border-radius:12px;border:1px solid #E2E8F0;padding:12px 16px;text-align:center"><div style="font-size:10px;color:#64748B;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Personas</div><div style="font-size:22px;font-weight:700;color:#185FA5">'+totalPeople+'</div></div>';
+  html+='<div style="background:white;border-radius:12px;border:1px solid #E2E8F0;padding:12px 16px;text-align:center"><div style="font-size:10px;color:#64748B;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Total turnos</div><div style="font-size:22px;font-weight:700;color:#1D9E75">'+totalShifts+'</div></div>';
+  html+='</div>';
+  // Table
+  html+='<div style="background:white;border-radius:14px;border:1px solid #E2E8F0;overflow:hidden">';
+  html+='<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  html+='<thead><tr style="background:#F8FAFC;border-bottom:2px solid #E2E8F0">';
+  html+='<th style="padding:10px 14px;text-align:left;font-weight:700;color:#1E293B;white-space:nowrap">Nombre</th>';
+  html+='<th style="padding:10px 14px;text-align:left;font-weight:700;color:#1E293B;white-space:nowrap">RUT</th>';
+  html+='<th style="padding:10px 8px;text-align:center;font-weight:700;color:#1E293B">Total</th>';
+  html+='<th style="padding:10px 8px;text-align:left;font-weight:700;color:#1E293B">Por sucursal</th>';
+  html+='<th style="padding:10px 8px;text-align:left;font-weight:700;color:#1E293B">Fechas</th>';
+  html+='</tr></thead><tbody>';
+  filtered.forEach(function(p,idx){
+    // Count by branch
+    var byBranch={};
+    var byType={};
+    p.shifts.forEach(function(s){
+      byBranch[s.branch]=(byBranch[s.branch]||0)+1;
+      byType[s.shift]=(byType[s.shift]||0)+1;
+    });
+    var branchHtml=Object.keys(byBranch).sort().map(function(b){
+      var c=BRANCH_COLORS[b]||{dot:'#94A3B8'};
+      return '<span style="display:inline-flex;align-items:center;gap:3px;margin:1px 0"><span style="width:7px;height:7px;border-radius:50%;background:'+c.dot+';display:inline-block"></span>'+b+' <b>'+byBranch[b]+'</b></span>';
+    }).join('<br>');
+    var typeHtml=Object.keys(byType).sort().map(function(t){return t+': '+byType[t];}).join(', ');
+    // Sorted dates with shift type
+    var sortedShifts=p.shifts.slice().sort(function(a,b){return a.date.localeCompare(b.date);});
+    var datesHtml=sortedShifts.map(function(s){
+      var badge=s.shift==='AM'?'b-am':s.shift==='PM'?'b-pm':s.shift==='Nocturno'?'b-noc':'b-am';
+      return '<div style="display:flex;align-items:center;gap:4px;margin:1px 0"><span class="badge '+badge+'" style="font-size:9px;padding:1px 6px">'+s.shift+'</span><span>'+fmtDate(s.date)+'</span><span style="color:#94A3B8;font-size:10px">'+s.branch+'</span></div>';
+    }).join('');
+    var bg=idx%2===0?'#FFFFFF':'#F8FAFC';
+    html+='<tr style="background:'+bg+';border-bottom:1px solid #F1F5F9;vertical-align:top">';
+    html+='<td style="padding:10px 14px;font-weight:600">'+p.name+'</td>';
+    html+='<td style="padding:10px 14px;font-family:\'DM Mono\',monospace;font-size:11px;color:#475569">'+p.rut+'</td>';
+    html+='<td style="padding:10px 8px;text-align:center;font-weight:700;font-size:16px;color:#185FA5">'+p.shifts.length+'</td>';
+    html+='<td style="padding:10px 8px;font-size:11px;line-height:1.6">'+branchHtml+'<div style="color:#94A3B8;font-size:10px;margin-top:2px">'+typeHtml+'</div></td>';
+    html+='<td style="padding:10px 8px;font-size:11px;line-height:1.5">'+datesHtml+'</td>';
+    html+='</tr>';
+  });
+  html+='</tbody></table></div>';
+  cont.innerHTML=html;
+}
+
+function exportPagosExcel(){
+  if(!pagosData.length){showToast('Carga el reporte primero','err');return;}
+  var periodFilter=document.getElementById('pagos-period').value;
+  var branchFilter=document.getElementById('pagos-branch').value;
+  var wb=XLSX.utils.book_new();
+  // Sheet 1: Resumen por persona
+  var resRows=[['Nombre','RUT','Total turnos','Quilicura','Santiago Centro','Lo Barnechea','La Reina','AM','PM','Nocturno','Estándar']];
+  // Sheet 2: Detalle
+  var detRows=[['Nombre','RUT','Fecha','Sucursal','Turno','Horario','Periodo']];
+  pagosData.forEach(function(p){
+    var sh=p.shifts.filter(function(s){
+      if(periodFilter&&s.periodKey!==periodFilter)return false;
+      if(branchFilter&&s.branch!==branchFilter)return false;
+      return true;
+    });
+    if(!sh.length)return;
+    var bc={'Quilicura':0,'Santiago Centro':0,'Lo Barnechea':0,'La Reina':0};
+    var tc={'AM':0,'PM':0,'Nocturno':0,'Estándar':0};
+    sh.forEach(function(s){bc[s.branch]=(bc[s.branch]||0)+1;tc[s.shift]=(tc[s.shift]||0)+1;});
+    resRows.push([p.name,p.rut,sh.length,bc['Quilicura'],bc['Santiago Centro'],bc['Lo Barnechea'],bc['La Reina'],tc['AM'],tc['PM'],tc['Nocturno'],tc['Estándar']]);
+    sh.slice().sort(function(a,b){return a.date.localeCompare(b.date);}).forEach(function(s){
+      detRows.push([p.name,p.rut,s.date,s.branch,s.shift,s.horario,s.periodLabel]);
+    });
+  });
+  var ws1=XLSX.utils.aoa_to_sheet(resRows);
+  ws1['!cols']=[{wch:24},{wch:14},{wch:12},{wch:12},{wch:16},{wch:14},{wch:10},{wch:6},{wch:6},{wch:10},{wch:10}];
+  XLSX.utils.book_append_sheet(wb,ws1,'Resumen pagos');
+  var ws2=XLSX.utils.aoa_to_sheet(detRows);
+  ws2['!cols']=[{wch:24},{wch:14},{wch:12},{wch:16},{wch:10},{wch:18},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,ws2,'Detalle turnos');
+  var suffix=periodFilter||'todos';
+  XLSX.writeFile(wb,'Pagos_'+suffix+'.xlsx');
+  showToast('Excel de pagos descargado','ok');
+}
 
 function exportOverviewExcel(){
   if(!shifts.length){showToast('No hay turnos creados aún','err');return;}
