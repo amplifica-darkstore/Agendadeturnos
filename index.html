@@ -2702,17 +2702,28 @@ async function renderHistory(){
       return apiCall({action:'getShifts',monthKey:m.key}).then(function(r){
         const list=(r&&r.shifts)||[];
         return list.filter(function(s){return(s.enrolled||[]).some(function(e){return e.rut===myRut;});})
-                   .map(function(s){return Object.assign({},s,{_periodLabel:m.label});});
+                   .map(function(s){
+                     // Use the period label that matches the shift's actual date, not just the sheet it came from
+                     const iso=fmtDateISO(s.date);
+                     const correctDef=MONTH_DEFS.slice().reverse().find(function(d){return iso>=d.dateFrom&&iso<=d.dateTo;});
+                     return Object.assign({},s,{_periodLabel:correctDef?correctDef.label:m.label});
+                   });
       }).catch(function(){return[];});
     }));
     results.forEach(function(arr){allMine=allMine.concat(arr);});
-    // Dedup: same branch|shift|date → keep the one with most enrolled (same logic as loadShifts)
+    // Dedup: same branch|shift|date → keep the one with most enrolled, always use correct period label
     const byKey={};
     allMine.forEach(function(s){
       const key=s.branch+'|'+s.shift+'|'+fmtDateISO(s.date);
       const ex=byKey[key];
       if(!ex){byKey[key]=s;return;}
-      if((s.enrolled||[]).length>(ex.enrolled||[]).length)byKey[key]=s;
+      // Keep the one with more enrolled, but always use the correct period label based on date
+      const winner=(s.enrolled||[]).length>=(ex.enrolled||[]).length?s:ex;
+      // Recalculate period label from date
+      const iso=fmtDateISO(winner.date);
+      const correctDef=MONTH_DEFS.slice().reverse().find(function(m){return iso>=m.dateFrom&&iso<=m.dateTo;});
+      winner._periodLabel=correctDef?correctDef.label:(winner._periodLabel||'');
+      byKey[key]=winner;
     });
     allMine=Object.values(byKey);
   }catch(e){
