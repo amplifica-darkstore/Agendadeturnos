@@ -936,6 +936,7 @@ async function apiCall(body){
     if(body.shiftType)params.shiftType=body.shiftType;
     if(body.date)params.date=body.date;
     if(body.horario)params.horario=body.horario;
+    if(body.admin)params.admin=body.admin;
     return await jsonp(params);
   }catch(e){console.error('API error',e);return {error:e.toString()};}
 }
@@ -1947,63 +1948,34 @@ function renderWorker(){
         </div>
       </div>`;
 
-    const w1=bList.filter(s=>weekOf(s.date)===1);
-    const w2=bList.filter(s=>weekOf(s.date)===2);
-    const w3=bList.filter(s=>weekOf(s.date)===3);
-
-    if(w1.length){
-      html+=`<div style="font-size:13px;font-weight:700;color:#1a1a6e;padding:7px 16px;background:white;border-radius:8px;border-left:4px solid #1a1a6e;display:inline-block;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,0.08)"><i class="ti ti-calendar" style="margin-right:5px"></i>${getWeekLabel(1)}</div>`;
-      const dates1=[...new Set(w1.map(s=>fmtDateISO(s.date)))].sort((a,b)=>{
-          const da=parseDate(a),db=parseDate(b);
-          if(!da||!db)return 0;
-          return da-db;
-        });
+    const WEEK_STYLES=[
+      {border:'#1a1a6e',bg:'#F0F4FF',text:'#1a1a6e',bottom:'#2d2db5'},
+      {border:'#1D9E75',bg:'#F0FDF4',text:'#166534',bottom:'#1D9E75'},
+      {border:'#7C3AED',bg:'#F5F3FF',text:'#5B21B6',bottom:'#7C3AED'},
+      {border:'#D97706',bg:'#FFFBEB',text:'#92400E',bottom:'#D97706'},
+      {border:'#64748B',bg:'#F8FAFC',text:'#334155',bottom:'#64748B'},
+    ];
+    [1,2,3,4,5].forEach(function(wn){
+      const ws=bList.filter(s=>weekOf(s.date)===wn);
+      if(!ws.length)return;
+      const st=WEEK_STYLES[wn-1];
+      const isFirst=wn===1;
+      html+=`<div style="font-size:${isFirst?'13':'11'}px;font-weight:700;color:${st.text};padding:${isFirst?'7px 16px':'5px 12px'};background:white;border-radius:8px;border-left:4px solid ${st.border};display:inline-block;margin-bottom:${isFirst?'12':'10'}px${isFirst?';box-shadow:0 1px 4px rgba(0,0,0,0.08)':''}"><i class="ti ti-calendar" style="margin-right:5px"></i>${getWeekLabel(wn)}</div>`;
+      const datesW=[...new Set(ws.map(s=>fmtDateISO(s.date)))].sort((a,b)=>{
+        const da=parseDate(a),db=parseDate(b);
+        if(!da||!db)return 0;
+        return da-db;
+      });
       html+=`<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">`;
-      dates1.forEach(date=>{
-        const dayShifts=w1.filter(s=>fmtDateISO(s.date)===date);
+      datesW.forEach(date=>{
+        const dayShifts=ws.filter(s=>fmtDateISO(s.date)===date);
         html+=`<div style="min-width:200px;flex:1;max-width:260px">
-          <div style="font-size:14px;font-weight:800;color:#1a1a6e;margin-bottom:8px;padding:8px 12px;background:#F0F4FF;border-radius:8px;border-bottom:2px solid #2d2db5">${fmtDate(date)}</div>
+          <div style="font-size:14px;font-weight:800;color:${st.text};margin-bottom:8px;padding:8px 12px;background:${st.bg};border-radius:8px;border-bottom:2px solid ${st.bottom}">${fmtDate(date)}</div>
           <div style="display:flex;flex-direction:column;gap:8px">${dayShifts.map(s=>shiftCardCompact(s)).join('')}</div>
         </div>`;
       });
       html+=`</div>`;
-    }
-
-    if(w2.length){
-      html+=`<div style="font-size:11px;font-weight:700;color:#475569;padding:5px 12px;background:white;border-radius:8px;border-left:4px solid #1D9E75;display:inline-block;margin-bottom:10px"><i class="ti ti-calendar" style="margin-right:5px"></i>${getWeekLabel(2)}</div>`;
-      const dates2=[...new Set(w2.map(s=>fmtDateISO(s.date)))].sort((a,b)=>{
-          const da=parseDate(a),db=parseDate(b);
-          if(!da||!db)return 0;
-          return da-db;
-        });
-      html+=`<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">`;
-      dates2.forEach(date=>{
-        const dayShifts=w2.filter(s=>fmtDateISO(s.date)===date);
-        html+=`<div style="min-width:200px;flex:1;max-width:260px">
-          <div style="font-size:14px;font-weight:800;color:#1a1a6e;margin-bottom:8px;padding:8px 12px;background:#F0F4FF;border-radius:8px;border-bottom:2px solid #2d2db5">${fmtDate(date)}</div>
-          <div style="display:flex;flex-direction:column;gap:8px">${dayShifts.map(s=>shiftCardCompact(s)).join('')}</div>
-        </div>`;
-      });
-      html+=`</div>`;
-    }
-
-    if(w3.length){
-      html+=`<div style="font-size:11px;font-weight:700;color:#475569;padding:5px 12px;background:white;border-radius:8px;border-left:4px solid #7C3AED;display:inline-block;margin-bottom:10px"><i class="ti ti-calendar" style="margin-right:5px"></i>${getWeekLabel(3)}</div>`;
-      const dates3=[...new Set(w3.map(s=>fmtDateISO(s.date)))].sort((a,b)=>{
-          const da=parseDate(a),db=parseDate(b);
-          if(!da||!db)return 0;
-          return da-db;
-        });
-      html+=`<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">`;
-      dates3.forEach(date=>{
-        const dayShifts=w3.filter(s=>fmtDateISO(s.date)===date);
-        html+=`<div style="min-width:200px;flex:1;max-width:260px">
-          <div style="font-size:14px;font-weight:800;color:#5B21B6;margin-bottom:8px;padding:8px 12px;background:#F5F3FF;border-radius:8px;border-bottom:2px solid #7C3AED">${fmtDate(date)}</div>
-          <div style="display:flex;flex-direction:column;gap:8px">${dayShifts.map(s=>shiftCardCompact(s)).join('')}</div>
-        </div>`;
-      });
-      html+=`</div>`;
-    }
+    });
 
     html+=`</div><hr style="border:none;border-top:1px solid #E2E8F0;margin-bottom:24px">`;
   });
