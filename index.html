@@ -2542,13 +2542,13 @@ async function adminDelShift(id){
 async function adminDelPerson(shiftId,rut){
   const s=shifts.find(x=>x.id===shiftId);if(!s)return;
   try{
-    const res=await apiCall({action:'unenroll',monthKey:currentMonthKey,shiftId,rut});
+    const res=await apiCall({action:'unenroll',monthKey:currentMonthKey,shiftId,rut,admin:'true'});
     if(res&&res.ok){
       s.enrolled=(s.enrolled||[]).filter(e=>e.rut!==rut);
       renderAdmin();populateAdminSel();
       showToast('Persona eliminada del turno','info');
     }else{
-      showToast('Error al eliminar. Intenta nuevamente.','err');
+      showToast((res&&res.error)||'Error al eliminar. Intenta nuevamente.','err');
     }
   }catch(e){showToast('Error de conexión','err');}
 }
