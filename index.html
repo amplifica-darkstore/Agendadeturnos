@@ -220,6 +220,7 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
             <div id="topbar-period-dropdown" style="display:none"></div>
             <button class="tab" id="tab-overview" onclick="goTab('overview',event)" style="display:none"><i class="ti ti-table" style="font-size:13px;margin-right:4px"></i>Resumen</button>
             <button class="tab" id="tab-pagos" onclick="goTab('pagos',event)" style="display:none"><i class="ti ti-cash" style="font-size:13px;margin-right:4px"></i>Pagos</button>
+            <button class="tab" id="tab-eval" onclick="goTab('eval',event)" style="display:none"><i class="ti ti-star" style="font-size:13px;margin-right:4px"></i>Evaluaciones</button>
           </div>
         </div>
       </div>
@@ -555,6 +556,39 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
     </div>
     <div id="loading-pagos" class="loading" style="display:none"><i class="ti ti-refresh"></i>Cargando todos los periodos...</div>
     <div id="pagos-content"></div>
+  </div>
+
+  <div id="page-eval" class="page">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <div>
+        <h2 style="font-size:15px;font-weight:700;color:#1E293B"><i class="ti ti-star" style="margin-right:6px;color:#F59E0B"></i>Evaluaciones de personal</h2>
+        <p style="font-size:11px;color:#64748B;margin-top:3px">Califica del 1 al 5 a cada persona. Las evaluaciones se guardan localmente en este navegador.</p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-outline btn-sm" onclick="loadAndRenderEval()"><i class="ti ti-refresh" style="margin-right:4px"></i>Actualizar</button>
+        <button class="btn btn-sm" onclick="exportEvalExcel()" style="background:linear-gradient(135deg,#166534,#059669);color:white;border:none;display:flex;align-items:center;gap:5px"><i class="ti ti-file-spreadsheet" style="font-size:14px"></i>Descargar Excel</button>
+      </div>
+    </div>
+    <!-- Filtros y búsqueda -->
+    <div style="background:white;border-radius:14px;border:1px solid #E2E8F0;padding:12px 16px;margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <i class="ti ti-filter" style="color:#185FA5;font-size:16px"></i>
+      <input type="text" id="eval-search" oninput="renderEval()" placeholder="Buscar nombre o RUT..." style="flex:1;min-width:180px;padding:7px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:12px;font-family:'DM Sans',sans-serif">
+      <select id="eval-filter-stars" onchange="renderEval()" style="padding:7px 10px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:12px;background:white;color:#1E293B;font-family:'DM Sans',sans-serif;font-weight:500">
+        <option value="">Todas las evaluaciones</option>
+        <option value="0">Sin evaluar</option>
+        <option value="5">★★★★★ (5)</option>
+        <option value="4">★★★★☆ (4)</option>
+        <option value="3">★★★☆☆ (3)</option>
+        <option value="2">★★☆☆☆ (2)</option>
+        <option value="1">★☆☆☆☆ (1)</option>
+      </select>
+      <select id="eval-filter-branch" onchange="renderEval()" style="padding:7px 10px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:12px;background:white;color:#1E293B;font-family:'DM Sans',sans-serif;font-weight:500">
+        <option value="">Todas las sucursales</option>
+        <option>Quilicura</option><option>Santiago Centro</option><option>Lo Barnechea</option><option>La Reina</option>
+      </select>
+    </div>
+    <div id="loading-eval" class="loading" style="display:none"><i class="ti ti-refresh"></i>Cargando personal...</div>
+    <div id="eval-content"></div>
   </div>
 
   <div id="page-admin" class="page">
@@ -1468,6 +1502,7 @@ function openWorkerPage(){
   document.getElementById('tab-admin').style.display='none';
   document.getElementById('tab-overview').style.display='none';
   document.getElementById('tab-pagos').style.display='none';
+  document.getElementById('tab-eval').style.display='none';
   const tpd=document.getElementById('topbar-period-dropdown');if(tpd){tpd.style.display='none';tpd.innerHTML='';}
   document.getElementById('topbar-actions').innerHTML='';
   document.getElementById('w-name-display').textContent=myName;
@@ -1494,6 +1529,7 @@ function previewWorkerView(){
   document.getElementById('tab-admin').classList.remove('active');
   document.getElementById('tab-overview').style.display='none';
   document.getElementById('tab-pagos').style.display='none';
+  document.getElementById('tab-eval').style.display='none';
   const tpd=document.getElementById('topbar-period-dropdown');if(tpd){tpd.style.display='none';tpd.innerHTML='';}
   document.getElementById('topbar-actions').innerHTML=`
     <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:99px;font-size:12px;font-weight:700;background:#F5C800;color:#1a1a6e;border:none">
@@ -1516,6 +1552,7 @@ function openAdminPage(){
   document.getElementById('tab-admin').classList.add('active');
   document.getElementById('tab-overview').style.display='flex';
   document.getElementById('tab-pagos').style.display='flex';
+  document.getElementById('tab-eval').style.display='flex';
   document.getElementById('tab-worker').style.display='none';
   document.getElementById('tab-history').style.display='none';
   renderAdminTopbarActions();
@@ -1647,7 +1684,7 @@ function goTab(tab,e){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   e.target.closest('.tab').classList.add('active');
   if(tab==='worker'){
-    if(myRole==='admin'){myRole='';myRut='';myName='';try{localStorage.removeItem('cj26_role');}catch(e){}document.getElementById('topbar-actions').innerHTML='';document.getElementById('tab-overview').style.display='none';document.getElementById('tab-pagos').style.display='none';allPages('page-login');return;}
+    if(myRole==='admin'){myRole='';myRut='';myName='';try{localStorage.removeItem('cj26_role');}catch(e){}document.getElementById('topbar-actions').innerHTML='';document.getElementById('tab-overview').style.display='none';document.getElementById('tab-pagos').style.display='none';document.getElementById('tab-eval').style.display='none';allPages('page-login');return;}
     if(!myRut){allPages('page-login');return;}
     allPages('page-worker');loadAndRenderWorker();
   }else if(tab==='admin'){
@@ -1663,6 +1700,9 @@ function goTab(tab,e){
   }else if(tab==='pagos'){
     if(myRole!=='admin')return;
     allPages('page-pagos');loadAndRenderPagos();
+  }else if(tab==='eval'){
+    if(myRole!=='admin')return;
+    allPages('page-eval');loadAndRenderEval();
   }
 }
 
@@ -1676,7 +1716,7 @@ function logout(){
   document.getElementById('btn-role-worker').classList.remove('selected');document.getElementById('btn-role-admin').classList.remove('selected');
   document.getElementById('topbar-actions').innerHTML='';
   const tpd=document.getElementById('topbar-period-dropdown');if(tpd){tpd.style.display='none';tpd.innerHTML='';}
-  ['tab-worker','tab-history','tab-admin','tab-overview','tab-pagos'].forEach(function(id){
+  ['tab-worker','tab-history','tab-admin','tab-overview','tab-pagos','tab-eval'].forEach(function(id){
     const el=document.getElementById(id);
     if(el){el.style.display='none';el.classList.remove('active');}
   });
@@ -2713,6 +2753,7 @@ function selectPeriod(key){
   document.getElementById('tab-history').style.display='none';
   document.getElementById('tab-overview').style.display='none';
   document.getElementById('tab-pagos').style.display='none';
+  document.getElementById('tab-eval').style.display='none';
   document.getElementById('topbar-actions').innerHTML='';
   allPages('page-login');
   populateDates();
@@ -2988,6 +3029,192 @@ async function changeBlockType(btn){
   finally{btn.disabled=false;}
 }
 
+
+// ── Evaluaciones ─────────────────────────────────────────────
+var EVAL_KEY='cj26_evaluaciones';
+var evalPeopleData=[];
+
+function loadEvalRatings(){
+  try{return JSON.parse(localStorage.getItem(EVAL_KEY)||'{}');}catch(e){return{};}
+}
+function saveEvalRating(rut,stars,note){
+  var all=loadEvalRatings();
+  if(!all[rut])all[rut]={};
+  all[rut].stars=stars;
+  if(note!==undefined)all[rut].note=note;
+  all[rut].updatedAt=new Date().toISOString();
+  try{localStorage.setItem(EVAL_KEY,JSON.stringify(all));}catch(e){}
+}
+
+async function loadAndRenderEval(){
+  document.getElementById('loading-eval').style.display='block';
+  document.getElementById('eval-content').innerHTML='';
+  var allShifts=[];
+  try{
+    var results=await Promise.all(MONTH_DEFS.map(function(m){
+      return apiCall({action:'getShifts',monthKey:m.key}).then(function(r){
+        return (r&&r.shifts)||[];
+      }).catch(function(){return[];});
+    }));
+    results.forEach(function(arr){allShifts=allShifts.concat(arr);});
+  }catch(e){}
+  // Dedup shifts
+  var byKey={};
+  allShifts.forEach(function(s){
+    var k=s.branch+'|'+s.shift+'|'+fmtDateISO(s.date);
+    var ex=byKey[k];
+    if(!ex||(s.enrolled||[]).length>(ex.enrolled||[]).length) byKey[k]=s;
+  });
+  allShifts=Object.values(byKey);
+  // Build per-person
+  var people={};
+  allShifts.forEach(function(s){
+    (s.enrolled||[]).forEach(function(e){
+      if(!e.rut)return;
+      if(!people[e.rut]) people[e.rut]={name:e.name||'',rut:e.rut,shifts:[],branches:{}};
+      if(e.name&&e.name.length>(people[e.rut].name||'').length) people[e.rut].name=e.name;
+      people[e.rut].shifts.push({branch:s.branch,shift:s.shift,date:fmtDateISO(s.date)});
+      people[e.rut].branches[s.branch]=(people[e.rut].branches[s.branch]||0)+1;
+    });
+  });
+  evalPeopleData=Object.values(people).sort(function(a,b){return a.name.localeCompare(b.name);});
+  document.getElementById('loading-eval').style.display='none';
+  renderEval();
+}
+
+function renderEval(){
+  var cont=document.getElementById('eval-content');
+  if(!cont)return;
+  var search=(document.getElementById('eval-search').value||'').toLowerCase().trim();
+  var filterStars=document.getElementById('eval-filter-stars').value;
+  var filterBranch=document.getElementById('eval-filter-branch').value;
+  var ratings=loadEvalRatings();
+
+  var filtered=evalPeopleData.filter(function(p){
+    if(search&&p.name.toLowerCase().indexOf(search)===-1&&p.rut.toLowerCase().indexOf(search)===-1)return false;
+    if(filterBranch&&!p.branches[filterBranch])return false;
+    var r=ratings[p.rut];
+    if(filterStars==='0'&&r&&r.stars>0)return false;
+    if(filterStars==='0'&&(!r||!r.stars))return true;
+    if(filterStars&&filterStars!=='0'&&(!r||String(r.stars)!==filterStars))return false;
+    return true;
+  });
+
+  if(!evalPeopleData.length){
+    cont.innerHTML='<div class="loading" style="text-align:center;padding:24px"><i class="ti ti-refresh" style="font-size:32px;display:block;margin-bottom:8px;color:#94A3B8"></i><p style="color:#64748B">Cargando personal...</p></div>';return;
+  }
+  if(!filtered.length){
+    cont.innerHTML='<div class="loading" style="text-align:center;padding:24px"><i class="ti ti-users-minus" style="font-size:32px;display:block;margin-bottom:8px;color:#94A3B8"></i><p style="color:#64748B">No se encontraron personas.</p></div>';return;
+  }
+
+  // Stats bar
+  var totalRated=filtered.filter(function(p){var r=ratings[p.rut];return r&&r.stars>0;}).length;
+  var avgAll=0;var cnt=0;
+  filtered.forEach(function(p){var r=ratings[p.rut];if(r&&r.stars>0){avgAll+=r.stars;cnt++;}});
+  var avg=cnt>0?(avgAll/cnt).toFixed(1):'-';
+
+  var html='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px">';
+  html+='<div style="background:white;border-radius:12px;border:1px solid #E2E8F0;padding:12px 16px;text-align:center"><div style="font-size:10px;color:#64748B;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Personas</div><div style="font-size:22px;font-weight:700;color:#185FA5">'+filtered.length+'</div></div>';
+  html+='<div style="background:white;border-radius:12px;border:1px solid #E2E8F0;padding:12px 16px;text-align:center"><div style="font-size:10px;color:#64748B;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Evaluadas</div><div style="font-size:22px;font-weight:700;color:#1D9E75">'+totalRated+'</div></div>';
+  html+='<div style="background:white;border-radius:12px;border:1px solid #E2E8F0;padding:12px 16px;text-align:center"><div style="font-size:10px;color:#64748B;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Promedio ★</div><div style="font-size:22px;font-weight:700;color:#F59E0B">'+avg+'</div></div>';
+  html+='</div>';
+
+  // Cards grid
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px">';
+  filtered.forEach(function(p){
+    var r=ratings[p.rut]||{stars:0,note:''};
+    var stars=r.stars||0;
+    var note=r.note||'';
+    // Branches pills
+    var branchHtml=Object.keys(p.branches).sort().map(function(b){
+      var c=BRANCH_COLORS[b]||{dot:'#94A3B8'};
+      return '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:600;background:#F1F5F9;color:#334155;margin:1px"><span style="width:6px;height:6px;border-radius:50%;background:'+c.dot+';display:inline-block;flex-shrink:0"></span>'+b+' <b>'+p.branches[b]+'</b></span>';
+    }).join('');
+    // Star rating HTML
+    var starsHtml='<div style="display:flex;gap:4px;margin:8px 0 6px">';
+    for(var i=1;i<=5;i++){
+      var filled=i<=stars;
+      starsHtml+='<button onclick="setEvalStar(\''+p.rut+'\','+i+')" title="'+i+' estrella'+(i>1?'s':'')+'" '
+        +'style="background:none;border:none;cursor:pointer;padding:2px;font-size:24px;color:'+(filled?'#F59E0B':'#D1D5DB')+';line-height:1;transition:color 0.1s" '
+        +'onmouseover="hoverEvalStar(\''+p.rut+'\','+i+')" onmouseleave="unhoverEvalStar(\''+p.rut+'\')" '
+        +'id="star-'+p.rut.replace(/[^a-zA-Z0-9]/g,'_')+'-'+i+'">★</button>';
+    }
+    starsHtml+='</div>';
+    var updLabel=r.updatedAt?'<span style="font-size:9px;color:#94A3B8">Actualizado '+fmtTs(r.updatedAt)+'</span>':'';
+    html+='<div id="eval-card-'+p.rut.replace(/[^a-zA-Z0-9]/g,'_')+'" style="background:white;border-radius:14px;border:1px solid '+(stars>0?'#FDE68A':'#E2E8F0')+';padding:16px;box-shadow:0 1px 4px rgba(0,0,0,0.05)">';
+    html+='<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">';
+    html+='<div>';
+    html+='<div style="font-size:14px;font-weight:700;color:#1E293B">'+p.name+'</div>';
+    html+='<div style="font-family:\'DM Mono\',monospace;font-size:11px;color:#64748B;margin-top:1px">'+p.rut+'</div>';
+    html+='</div>';
+    html+='<div style="text-align:right;flex-shrink:0"><div style="font-size:11px;font-weight:600;color:#185FA5">'+p.shifts.length+' turno'+(p.shifts.length!==1?'s':'')+'</div></div>';
+    html+='</div>';
+    html+='<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:2px">'+branchHtml+'</div>';
+    html+=starsHtml;
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">';
+    html+='<span style="font-size:11px;font-weight:600;color:'+(stars>0?'#92400E':'#94A3B8')+'">'+(stars>0?'★'.repeat(stars)+'☆'.repeat(5-stars)+' ('+stars+'/5)':'Sin evaluar')+'</span>';
+    html+=updLabel;
+    html+='</div>';
+    html+='<textarea id="note-'+p.rut.replace(/[^a-zA-Z0-9]/g,'_')+'" onblur="saveEvalNote(\''+p.rut+'\')" placeholder="Comentario u observación (opcional)..." '
+      +'style="width:100%;padding:8px 10px;border:1.5px solid #E2E8F0;border-radius:8px;font-size:11px;font-family:\'DM Sans\',sans-serif;resize:vertical;min-height:52px;color:#334155;outline:none;box-sizing:border-box">'+escHtml(note)+'</textarea>';
+    html+='</div>';
+  });
+  html+='</div>';
+  cont.innerHTML=html;
+}
+
+function setEvalStar(rut,stars){
+  var r=loadEvalRatings();
+  var cur=(r[rut]&&r[rut].stars)||0;
+  var newVal=cur===stars?0:stars;
+  saveEvalRating(rut,newVal);
+  renderEval();
+}
+function hoverEvalStar(rut,stars){
+  var key=rut.replace(/[^a-zA-Z0-9]/g,'_');
+  for(var i=1;i<=5;i++){
+    var el=document.getElementById('star-'+key+'-'+i);
+    if(el)el.style.color=i<=stars?'#F59E0B':'#D1D5DB';
+  }
+}
+function unhoverEvalStar(rut){
+  var r=loadEvalRatings();
+  var stars=(r[rut]&&r[rut].stars)||0;
+  var key=rut.replace(/[^a-zA-Z0-9]/g,'_');
+  for(var i=1;i<=5;i++){
+    var el=document.getElementById('star-'+key+'-'+i);
+    if(el)el.style.color=i<=stars?'#F59E0B':'#D1D5DB';
+  }
+}
+function saveEvalNote(rut){
+  var key=rut.replace(/[^a-zA-Z0-9]/g,'_');
+  var ta=document.getElementById('note-'+key);
+  if(!ta)return;
+  var note=ta.value.trim();
+  var r=loadEvalRatings();
+  var stars=(r[rut]&&r[rut].stars)||0;
+  saveEvalRating(rut,stars,note);
+}
+function escHtml(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function exportEvalExcel(){
+  if(!evalPeopleData.length){showToast('Carga el listado primero','err');return;}
+  var ratings=loadEvalRatings();
+  var rows=[['Nombre','RUT','Total turnos','Sucursales','Evaluación (1-5)','Estrellas','Comentario','Última actualización']];
+  evalPeopleData.forEach(function(p){
+    var r=ratings[p.rut]||{};
+    var branches=Object.keys(p.branches).sort().map(function(b){return b+' ('+p.branches[b]+')'}).join(', ');
+    var stars=r.stars||0;
+    var starsTxt=stars>0?'★'.repeat(stars)+'☆'.repeat(5-stars):'Sin evaluar';
+    rows.push([p.name,p.rut,p.shifts.length,branches,stars||'',starsTxt,r.note||'',r.updatedAt?fmtTs(r.updatedAt):'']);
+  });
+  var wb=XLSX.utils.book_new();
+  var ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:24},{wch:14},{wch:12},{wch:36},{wch:14},{wch:14},{wch:36},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,ws,'Evaluaciones');
+  XLSX.writeFile(wb,'Evaluaciones_personal.xlsx');
+  showToast('Excel de evaluaciones descargado','ok');
+}
 
 // ── Payment Report ──────────────────────────────────────────
 let pagosData=[];
