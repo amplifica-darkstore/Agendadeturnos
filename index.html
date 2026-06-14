@@ -848,26 +848,26 @@ let currentMonthDef = MONTH_DEFS.find(function(m){return m.key==='jun-2026';})||
 // Si el turno ya tiene un horario guardado en Sheets (s.horario), ese tiene prioridad.
 const SPECIAL_AM_BRANCHES_SAB30 = ['Santiago Centro','La Reina','Lo Barnechea'];
 function getHorario(s) {
-  if (s.shift === 'AM') {
-    const raw = String(s.date || '');
-    let iso = '';
-    const isoMatch = raw.match(/(\d{4})-(\d{2})-(\d{2})/);
-    if (isoMatch) {
-      iso = isoMatch[0];
-    } else {
-      const monthMap = {Jan:'01',Feb:'02',Mar:'03',Apr:'04',May:'05',Jun:'06',Jul:'07',Aug:'08',Sep:'09',Oct:'10',Nov:'11',Dec:'12'};
-      const m = raw.match(/([A-Za-z]+)\s+(\d{1,2})\s+(\d{4})/);
-      if (m && monthMap[m[1]]) {
-        iso = m[3] + '-' + monthMap[m[1]] + '-' + String(m[2]).padStart(2,'0');
-      }
+  // Extraer ISO date del turno
+  const raw = String(s.date || '');
+  let iso = '';
+  const isoMatch = raw.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    iso = isoMatch[0];
+  } else {
+    const monthMap = {Jan:'01',Feb:'02',Mar:'03',Apr:'04',May:'05',Jun:'06',Jul:'07',Aug:'08',Sep:'09',Oct:'10',Nov:'11',Dec:'12'};
+    const m = raw.match(/([A-Za-z]+)\s+(\d{1,2})\s+(\d{4})/);
+    if (m && monthMap[m[1]]) {
+      iso = m[3] + '-' + monthMap[m[1]] + '-' + String(m[2]).padStart(2,'0');
     }
-    if (iso) {
-      const parts = iso.split('-').map(Number);
-      const dt = new Date(parts[0], parts[1]-1, parts[2]);
-      const dow = dt.getDay();
-      if (dow === 0) return '09:00 – 19:00';
-      if (dow === 6 && iso === '2026-05-30' && SPECIAL_AM_BRANCHES_SAB30.includes(s.branch)) return '09:00 – 19:00';
-    }
+  }
+  if (iso) {
+    const parts = iso.split('-').map(Number);
+    const dow = new Date(parts[0], parts[1]-1, parts[2]).getDay();
+    // Domingos: todas las sucursales, todos los turnos → 09:00 – 19:00
+    if (dow === 0) return '09:00 – 19:00';
+    // Sábado 30 mayo (excepcional): 3 sucursales AM
+    if (s.shift === 'AM' && dow === 6 && iso === '2026-05-30' && SPECIAL_AM_BRANCHES_SAB30.includes(s.branch)) return '09:00 – 19:00';
   }
   // PM Lo Barnechea: siempre 11:00-21:00
   if (s.shift === 'PM' && s.branch === 'Lo Barnechea') return '11:00 – 21:00';
