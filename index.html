@@ -3286,53 +3286,69 @@ function renderPagos(){
   html+='<div style="background:#EFF6FF;border-radius:12px;border:1px solid #93C5FD;padding:12px 16px;text-align:center"><div style="font-size:10px;color:#1E40AF;font-weight:600;text-transform:uppercase;letter-spacing:.5px">▸ Programado</div><div style="font-size:22px;font-weight:700;color:#1E40AF">'+totalProgramado+'</div></div>';
   html+='</div>';
 
-  // Table
-  html+='<div style="background:white;border-radius:14px;border:1px solid #E2E8F0;overflow:hidden">';
+  // Table — resumen claro de pago
+  html+='<div style="background:white;border-radius:14px;border:1px solid #E2E8F0;overflow-x:auto">';
   html+='<table style="width:100%;border-collapse:collapse;font-size:12px">';
-  html+='<thead><tr style="background:#F8FAFC;border-bottom:2px solid #E2E8F0">';
-  html+='<th style="padding:10px 14px;text-align:left;font-weight:700;color:#1E293B;white-space:nowrap">Nombre</th>';
-  html+='<th style="padding:10px 14px;text-align:left;font-weight:700;color:#1E293B;white-space:nowrap">RUT</th>';
-  html+='<th style="padding:10px 8px;text-align:center;font-weight:700;color:#166534;white-space:nowrap">✓ Asistió</th>';
-  html+='<th style="padding:10px 8px;text-align:center;font-weight:700;color:#92400E;white-space:nowrap">Pendiente</th>';
-  html+='<th style="padding:10px 8px;text-align:center;font-weight:700;color:#991B1B;white-space:nowrap">✗ No asistió</th>';
-  html+='<th style="padding:10px 8px;text-align:center;font-weight:700;color:#1E40AF;white-space:nowrap">▸ Programado</th>';
-  html+='<th style="padding:10px 8px;text-align:left;font-weight:700;color:#1E293B">Detalle turnos</th>';
+  html+='<thead><tr style="background:#1E293B;color:white">';
+  html+='<th style="padding:10px 12px;text-align:left;font-weight:700;white-space:nowrap">Nombre</th>';
+  html+='<th style="padding:10px 8px;text-align:left;font-weight:700;white-space:nowrap">RUT</th>';
+  html+='<th style="padding:10px 6px;text-align:center;font-weight:700;white-space:nowrap;background:#0F4C75">AM</th>';
+  html+='<th style="padding:10px 6px;text-align:center;font-weight:700;white-space:nowrap;background:#553C7B">PM</th>';
+  html+='<th style="padding:10px 6px;text-align:center;font-weight:700;white-space:nowrap;background:#1B3A4B">Noct.</th>';
+  html+='<th style="padding:10px 6px;text-align:center;font-weight:700;white-space:nowrap;background:#2D6A4F">Est.</th>';
+  html+='<th style="padding:10px 6px;text-align:center;font-weight:700;white-space:nowrap;background:#166534">✓ Total asistidos</th>';
+  html+='<th style="padding:10px 6px;text-align:center;font-weight:700;white-space:nowrap;background:#92400E">? Pend.</th>';
+  html+='<th style="padding:10px 6px;text-align:center;font-weight:700;white-space:nowrap;background:#991B1B">✗ No</th>';
+  html+='<th style="padding:10px 6px;text-align:center;font-weight:700;white-space:nowrap;background:#1E40AF">Prog.</th>';
+  html+='<th style="padding:10px 8px;text-align:left;font-weight:700;white-space:nowrap">Estado pago</th>';
   html+='</tr></thead><tbody>';
 
   filtered.forEach(function(p,idx){
-    var asistio=p.shifts.filter(function(s){return s.asistio==='Sí';});
+    var asistidos=p.shifts.filter(function(s){return s.asistio==='Sí';});
     var pendiente=p.shifts.filter(function(s){return !s.isFuture&&(s.asistio==='Pendiente'||!s.asistio);});
     var noAsistio=p.shifts.filter(function(s){return s.asistio==='No';});
     var programado=p.shifts.filter(function(s){return s.isFuture&&(s.asistio==='Pendiente'||!s.asistio);});
-    var sortedShifts=p.shifts.slice().sort(function(a,b){return a.date.localeCompare(b.date);});
-    var datesHtml=sortedShifts.map(function(s){
-      var badge=s.shift==='AM'?'b-am':s.shift==='PM'?'b-pm':s.shift==='Nocturno'?'b-noc':'b-am';
-      var isFuturePend=s.isFuture&&(s.asistio==='Pendiente'||!s.asistio);
-      var asisColor=s.asistio==='Sí'?'#166534':s.asistio==='No'?'#991B1B':isFuturePend?'#1E40AF':'#92400E';
-      var asisBg=s.asistio==='Sí'?'#DCFCE7':s.asistio==='No'?'#FEE2E2':isFuturePend?'#DBEAFE':'#FEF3C7';
-      var asisLabel=s.asistio==='Sí'?'✓':s.asistio==='No'?'✗':isFuturePend?'▸':'?';
-      var asisText=isFuturePend?'Programado':s.asistio;
-      return '<div style="display:flex;align-items:center;gap:4px;margin:2px 0;flex-wrap:wrap">'
-        +'<span class="badge '+badge+'" style="font-size:9px;padding:1px 6px">'+s.shift+'</span>'
-        +'<span style="font-size:11px;color:#334155">'+fmtDate(s.date)+'</span>'
-        +'<span style="font-size:10px;color:#64748B">'+s.branch+'</span>'
-        +'<span style="font-size:10px;font-weight:700;color:'+asisColor+';background:'+asisBg+';border-radius:99px;padding:1px 6px">'+asisLabel+' '+asisText+'</span>'
-        +(s.obs?'<span style="font-size:10px;color:#64748B;margin-left:4px;font-style:italic">'+s.obs+'</span>':'')
-        +'</div>';
-    }).join('');
+    // Desglose por tipo de turno (solo asistidos)
+    var amAsis=asistidos.filter(function(s){return s.shift==='AM';}).length;
+    var pmAsis=asistidos.filter(function(s){return s.shift==='PM';}).length;
+    var nocAsis=asistidos.filter(function(s){return s.shift==='Nocturno';}).length;
+    var estAsis=asistidos.filter(function(s){return s.shift!=='AM'&&s.shift!=='PM'&&s.shift!=='Nocturno';}).length;
+    // Estado de pago
+    var pagoStatus=p.shifts[0]&&p.shifts[0].pago?p.shifts[0].pago:'Pendiente';
+    var pagoBg=pagoStatus==='Pendiente'?'#FEF3C7':'#DCFCE7';
+    var pagoColor=pagoStatus==='Pendiente'?'#92400E':'#166534';
+
     var bg=idx%2===0?'#FFFFFF':'#F8FAFC';
-    var rowBorder=noAsistio.length>0&&asistio.length===0?'border-left:3px solid #EF4444':asistio.length>0?'border-left:3px solid #22C55E':'border-left:3px solid #FDE68A';
-    html+='<tr style="background:'+bg+';border-bottom:1px solid #F1F5F9;vertical-align:top;'+rowBorder+'">';
-    html+='<td style="padding:10px 14px;font-weight:600">'+p.name+'</td>';
-    html+='<td style="padding:10px 14px;font-family:\'DM Mono\',monospace;font-size:11px;color:#475569">'+p.rut+'</td>';
-    html+='<td style="padding:10px 8px;text-align:center;font-weight:700;font-size:16px;color:#166534">'+asistio.length+'</td>';
-    html+='<td style="padding:10px 8px;text-align:center;font-weight:700;font-size:16px;color:#92400E">'+pendiente.length+'</td>';
-    html+='<td style="padding:10px 8px;text-align:center;font-weight:700;font-size:16px;color:#991B1B">'+noAsistio.length+'</td>';
-    html+='<td style="padding:10px 8px;text-align:center;font-weight:700;font-size:16px;color:#1E40AF">'+programado.length+'</td>';
-    html+='<td style="padding:10px 8px;font-size:11px;line-height:1.6">'+datesHtml+'</td>';
+    html+='<tr style="background:'+bg+';border-bottom:1px solid #E2E8F0;cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\'none\'?\'table-row\':\'none\'">';
+    html+='<td style="padding:8px 12px;font-weight:600">'+p.name+'</td>';
+    html+='<td style="padding:8px;font-family:\'DM Mono\',monospace;font-size:11px;color:#475569">'+p.rut+'</td>';
+    html+='<td style="padding:8px 6px;text-align:center;font-weight:700;color:#0F4C75">'+(amAsis||'-')+'</td>';
+    html+='<td style="padding:8px 6px;text-align:center;font-weight:700;color:#553C7B">'+(pmAsis||'-')+'</td>';
+    html+='<td style="padding:8px 6px;text-align:center;font-weight:700;color:#1B3A4B">'+(nocAsis||'-')+'</td>';
+    html+='<td style="padding:8px 6px;text-align:center;font-weight:700;color:#2D6A4F">'+(estAsis||'-')+'</td>';
+    html+='<td style="padding:8px 6px;text-align:center;font-weight:800;font-size:15px;color:#166534">'+asistidos.length+'</td>';
+    html+='<td style="padding:8px 6px;text-align:center;font-weight:700;color:#92400E">'+(pendiente.length||'-')+'</td>';
+    html+='<td style="padding:8px 6px;text-align:center;font-weight:700;color:#991B1B">'+(noAsistio.length||'-')+'</td>';
+    html+='<td style="padding:8px 6px;text-align:center;font-weight:700;color:#1E40AF">'+(programado.length||'-')+'</td>';
+    html+='<td style="padding:8px"><span style="font-size:10px;font-weight:700;color:'+pagoColor+';background:'+pagoBg+';border-radius:99px;padding:2px 8px">'+pagoStatus+'</span></td>';
     html+='</tr>';
+    // Fila expandible con detalle
+    var sortedShifts=p.shifts.slice().sort(function(a,b){return a.date.localeCompare(b.date);});
+    var detHtml='<table style="width:100%;font-size:11px;border-collapse:collapse;margin:4px 0">';
+    detHtml+='<tr style="color:#64748B;font-size:10px"><td style="padding:2px 6px;font-weight:600">Fecha</td><td style="padding:2px 6px;font-weight:600">Sucursal</td><td style="padding:2px 6px;font-weight:600">Tipo</td><td style="padding:2px 6px;font-weight:600">Horario</td><td style="padding:2px 6px;font-weight:600">Asistencia</td><td style="padding:2px 6px;font-weight:600">Obs</td></tr>';
+    sortedShifts.forEach(function(s){
+      var isFP=s.isFuture&&(s.asistio==='Pendiente'||!s.asistio);
+      var ac=s.asistio==='Sí'?'#166534':s.asistio==='No'?'#991B1B':isFP?'#1E40AF':'#92400E';
+      var ab=s.asistio==='Sí'?'#DCFCE7':s.asistio==='No'?'#FEE2E2':isFP?'#DBEAFE':'#FEF3C7';
+      var at=isFP?'Programado':s.asistio;
+      var badge=s.shift==='AM'?'b-am':s.shift==='PM'?'b-pm':s.shift==='Nocturno'?'b-noc':'b-am';
+      detHtml+='<tr style="border-top:1px solid #F1F5F9"><td style="padding:3px 6px">'+fmtDate(s.date)+'</td><td style="padding:3px 6px;color:#475569">'+s.branch+'</td><td style="padding:3px 6px"><span class="badge '+badge+'" style="font-size:9px;padding:1px 6px">'+s.shift+'</span></td><td style="padding:3px 6px;color:#64748B;font-size:10px">'+s.horario+'</td><td style="padding:3px 6px"><span style="font-size:10px;font-weight:700;color:'+ac+';background:'+ab+';border-radius:99px;padding:1px 6px">'+at+'</span></td><td style="padding:3px 6px;color:#64748B;font-style:italic;font-size:10px">'+(s.obs||'')+'</td></tr>';
+    });
+    detHtml+='</table>';
+    html+='<tr style="display:none;background:#F8FAFC"><td colspan="11" style="padding:6px 16px">'+detHtml+'</td></tr>';
   });
   html+='</tbody></table></div>';
+  html+='<p style="font-size:10px;color:#94A3B8;margin-top:8px;text-align:center">Haz clic en una fila para ver el detalle de turnos</p>';
   cont.innerHTML=html;
 }
 
@@ -3352,22 +3368,24 @@ function exportPagosExcel(){
       return true;
     });
     if(!sh.length)return;
-    var bc={'Quilicura':0,'Santiago Centro':0,'Lo Barnechea':0,'La Reina':0};
-    var bt={AM:0,PM:0,Nocturno:0};
-    sh.forEach(function(s){bc[s.branch]=(bc[s.branch]||0)+1;bt[s.shift]=(bt[s.shift]||0)+1;});
-    var asistio=sh.filter(function(s){return s.asistio==='Sí';}).length;
+    var asistidos=sh.filter(function(s){return s.asistio==='Sí';});
     var pendiente=sh.filter(function(s){return !s.isFuture&&(s.asistio==='Pendiente'||!s.asistio);}).length;
     var noAsistio=sh.filter(function(s){return s.asistio==='No';}).length;
     var programado=sh.filter(function(s){return s.isFuture&&(s.asistio==='Pendiente'||!s.asistio);}).length;
-    resRows.push([p.name,p.rut,sh.length,asistio,pendiente,noAsistio,programado,bt.AM||0,bt.PM||0,bt.Nocturno||0,bc['Quilicura'],bc['Santiago Centro'],bc['Lo Barnechea'],bc['La Reina']]);
+    var amAsis=asistidos.filter(function(s){return s.shift==='AM';}).length;
+    var pmAsis=asistidos.filter(function(s){return s.shift==='PM';}).length;
+    var nocAsis=asistidos.filter(function(s){return s.shift==='Nocturno';}).length;
+    var estAsis=asistidos.filter(function(s){return s.shift!=='AM'&&s.shift!=='PM'&&s.shift!=='Nocturno';}).length;
+    var pagoStatus=sh[0]&&sh[0].pago?sh[0].pago:'Pendiente';
+    resRows.push([p.name,p.rut,sh.length,asistidos.length,amAsis,pmAsis,nocAsis,estAsis,pendiente,noAsistio,programado,pagoStatus]);
     sh.slice().sort(function(a,b){return a.date.localeCompare(b.date);}).forEach(function(s){
       var asisExcel=s.isFuture&&(s.asistio==='Pendiente'||!s.asistio)?'Programado':s.asistio;
       detRows.push([p.name,p.rut,s.date,s.branch,s.shift,s.horario,s.periodLabel,asisExcel,s.pago,s.obs||'']);
     });
   });
-  resRows[0]=['Nombre','RUT','Total turnos','Asistió','Pendiente','No asistió','Programado','AM','PM','Nocturno','Quilicura','Santiago Centro','Lo Barnechea','La Reina'];
+  resRows[0]=['Nombre','RUT','Total turnos','Total asistidos','AM asistidos','PM asistidos','Nocturno asistidos','Estándar asistidos','Pendiente','No asistió','Programado','Estado pago'];
   var ws1=XLSX.utils.aoa_to_sheet(resRows);
-  ws1['!cols']=[{wch:24},{wch:14},{wch:12},{wch:10},{wch:10},{wch:12},{wch:12},{wch:8},{wch:8},{wch:10},{wch:12},{wch:16},{wch:14},{wch:10}];
+  ws1['!cols']=[{wch:24},{wch:14},{wch:12},{wch:14},{wch:13},{wch:13},{wch:16},{wch:16},{wch:10},{wch:12},{wch:12},{wch:14}];
   XLSX.utils.book_append_sheet(wb,ws1,'Resumen pagos');
   var ws2=XLSX.utils.aoa_to_sheet(detRows);
   ws2['!cols']=[{wch:24},{wch:14},{wch:12},{wch:16},{wch:12},{wch:18},{wch:20},{wch:12},{wch:12},{wch:30}];
