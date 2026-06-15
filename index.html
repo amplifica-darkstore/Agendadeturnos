@@ -3235,7 +3235,7 @@ async function loadAndRenderPagos(){
       people[e.rut].shifts.push({
         branch:s.branch,shift:s.shift,date:fmtDateISO(s.date),
         horario:getHorario(s),periodKey:s._periodKey,periodLabel:s._periodLabel,
-        asistio:normalizeAsistio(e.asistio),pago:e.pago||'Pendiente'
+        asistio:normalizeAsistio(e.asistio),pago:e.pago||'Pendiente',obs:e.obs||''
       });
     });
   });
@@ -3310,6 +3310,7 @@ function renderPagos(){
         +'<span style="font-size:11px;color:#334155">'+fmtDate(s.date)+'</span>'
         +'<span style="font-size:10px;color:#64748B">'+s.branch+'</span>'
         +'<span style="font-size:10px;font-weight:700;color:'+asisColor+';background:'+asisBg+';border-radius:99px;padding:1px 6px">'+asisLabel+' '+s.asistio+'</span>'
+        +(s.obs?'<span style="font-size:10px;color:#64748B;margin-left:4px;font-style:italic">'+s.obs+'</span>':'')
         +'</div>';
     }).join('');
     var bg=idx%2===0?'#FFFFFF':'#F8FAFC';
@@ -3335,7 +3336,7 @@ function exportPagosExcel(){
   // Hoja 1: Resumen por persona
   var resRows=[['Nombre','RUT','Total turnos','Asistió','Pendiente','No asistió','Quilicura','Santiago Centro','Lo Barnechea','La Reina']];
   // Hoja 2: Detalle turno a turno
-  var detRows=[['Nombre','RUT','Fecha','Sucursal','Turno','Horario','Periodo','Asistencia','Pago']];
+  var detRows=[['Nombre','RUT','Fecha','Sucursal','Turno','Horario','Periodo','Asistencia','Pago','Observaciones']];
   pagosData.forEach(function(p){
     var sh=p.shifts.filter(function(s){
       if(periodFilter&&s.periodKey!==periodFilter)return false;
@@ -3350,14 +3351,14 @@ function exportPagosExcel(){
     var noAsistio=sh.filter(function(s){return s.asistio==='No';}).length;
     resRows.push([p.name,p.rut,sh.length,asistio,pendiente,noAsistio,bc['Quilicura'],bc['Santiago Centro'],bc['Lo Barnechea'],bc['La Reina']]);
     sh.slice().sort(function(a,b){return a.date.localeCompare(b.date);}).forEach(function(s){
-      detRows.push([p.name,p.rut,s.date,s.branch,s.shift,s.horario,s.periodLabel,s.asistio,s.pago]);
+      detRows.push([p.name,p.rut,s.date,s.branch,s.shift,s.horario,s.periodLabel,s.asistio,s.pago,s.obs||'']);
     });
   });
   var ws1=XLSX.utils.aoa_to_sheet(resRows);
   ws1['!cols']=[{wch:24},{wch:14},{wch:12},{wch:10},{wch:10},{wch:12},{wch:12},{wch:16},{wch:14},{wch:10}];
   XLSX.utils.book_append_sheet(wb,ws1,'Resumen pagos');
   var ws2=XLSX.utils.aoa_to_sheet(detRows);
-  ws2['!cols']=[{wch:24},{wch:14},{wch:12},{wch:16},{wch:10},{wch:18},{wch:20},{wch:12},{wch:12}];
+  ws2['!cols']=[{wch:24},{wch:14},{wch:12},{wch:16},{wch:10},{wch:18},{wch:20},{wch:12},{wch:12},{wch:30}];
   XLSX.utils.book_append_sheet(wb,ws2,'Detalle turnos');
   var suffix=periodFilter||'todos';
   XLSX.writeFile(wb,'Pagos_'+suffix+'.xlsx');
