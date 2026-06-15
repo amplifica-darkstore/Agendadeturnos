@@ -3217,7 +3217,7 @@ async function loadAndRenderPagos(){
     }));
     results.forEach(function(arr){allShifts=allShifts.concat(arr);});
   }catch(e){}
-  // Dedup by branch|shift|date — keep shift with most enrolled
+  // Dedup shifts by branch|shift|date — keep shift with most enrolled
   var byKey={};
   allShifts.forEach(function(s){
     var k=s.branch+'|'+s.shift+'|'+fmtDateISO(s.date);
@@ -3225,14 +3225,29 @@ async function loadAndRenderPagos(){
     if(!ex||(s.enrolled||[]).length>(ex.enrolled||[]).length) byKey[k]=s;
   });
   allShifts=Object.values(byKey);
+
+  // Dedup enrolled within each shift — same RUT can appear more than once
+  allShifts.forEach(function(s){
+    var seenRut={};
+    s.enrolled=(s.enrolled||[]).filter(function(e){
+      if(!e.rut||seenRut[e.rut])return false;
+      seenRut[e.rut]=true;
+      return true;
+    });
+  });
+
   // Build per-person — include asistio and pago from enrolled entry
   var people={};
   allShifts.forEach(function(s){
+    var shiftKey=s.branch+'|'+s.shift+'|'+fmtDateISO(s.date);
     (s.enrolled||[]).forEach(function(e){
       if(!e.rut)return;
       if(!people[e.rut]) people[e.rut]={name:e.name,rut:e.rut,shifts:[]};
       if(e.name&&e.name.length>(people[e.rut].name||'').length) people[e.rut].name=e.name;
+      // Dedup same shift per person (can appear if same shift fetched from multiple monthKeys)
+      if(people[e.rut].shifts.some(function(x){return x._key===shiftKey;}))return;
       people[e.rut].shifts.push({
+        _key:shiftKey,
         branch:s.branch,shift:s.shift,date:fmtDateISO(s.date),
         horario:getHorario(s),periodKey:s._periodKey,periodLabel:s._periodLabel,
         asistio:normalizeAsistio(e.asistio),pago:e.pago||'Pendiente',obs:e.obs||'',
@@ -3357,10 +3372,14 @@ function exportPagosExcel(){
   var periodFilter=document.getElementById('pagos-period').value;
   var branchFilter=document.getElementById('pagos-branch').value;
   var wb=XLSX.utils.book_new();
-  // Hoja 1: Resumen por persona
-  var resRows=[['Nombre','RUT','Total turnos','Asistió','Pendiente','No asistió','Quilicura','Santiago Centro','Lo Barnechea','La Reina']];
+
+  // Hoja 1: Resumen por persona (sin duplicados)
+  var resRows=[['Nombre','RUT','Total turnos inscritos','Total asistidos','AM asistidos','PM asistidos','Nocturno asistidos','Estándar asistidos','Pendiente confirmación','No asistió','Programado (futuro)','Estado pago']];
   // Hoja 2: Detalle turno a turno
-  var detRows=[['Nombre','RUT','Fecha','Sucursal','Tipo turno','Horario','Periodo','Asistencia','Pago','Observaciones']];
+  var detRows=[['Nombre','RUT','Fecha','Sucursal','Tipo turno','Horario','Periodo','Asistencia','Estado pago','Observaciones']];
+  // Datos para hoja 3
+  var parapagarRows=[];
+
   pagosData.forEach(function(p){
     var sh=p.shifts.filter(function(s){
       if(periodFilter&&s.periodKey!==periodFilter)return false;
@@ -3382,17 +3401,35 @@ function exportPagosExcel(){
       var asisExcel=s.isFuture&&(s.asistio==='Pendiente'||!s.asistio)?'Programado':s.asistio;
       detRows.push([p.name,p.rut,s.date,s.branch,s.shift,s.horario,s.periodLabel,asisExcel,s.pago,s.obs||'']);
     });
+    if(asistidos.length>0){
+      parapagarRows.push([p.name,p.rut,asistidos.length,amAsis,pmAsis,nocAsis,estAsis,pagoStatus]);
+    }
   });
-  resRows[0]=['Nombre','RUT','Total turnos','Total asistidos','AM asistidos','PM asistidos','Nocturno asistidos','Estándar asistidos','Pendiente','No asistió','Programado','Estado pago'];
+
+  // Ordenar "Para Pagar" por nombre
+  parapagarRows.sort(function(a,b){return a[0].localeCompare(b[0]);});
+
   var ws1=XLSX.utils.aoa_to_sheet(resRows);
-  ws1['!cols']=[{wch:24},{wch:14},{wch:12},{wch:14},{wch:13},{wch:13},{wch:16},{wch:16},{wch:10},{wch:12},{wch:12},{wch:14}];
+  ws1['!cols']=[{wch:24},{wch:14},{wch:14},{wch:14},{wch:13},{wch:13},{wch:16},{wch:16},{wch:18},{wch:12},{wch:18},{wch:14}];
   XLSX.utils.book_append_sheet(wb,ws1,'Resumen pagos');
+
   var ws2=XLSX.utils.aoa_to_sheet(detRows);
   ws2['!cols']=[{wch:24},{wch:14},{wch:12},{wch:16},{wch:12},{wch:18},{wch:20},{wch:12},{wch:12},{wch:30}];
   XLSX.utils.book_append_sheet(wb,ws2,'Detalle turnos');
+
+  // Hoja 3: Para Pagar — lista limpia para procesar pagos
+  var ppHeader=[['Nombre','RUT','Turnos a pagar','AM','PM','Nocturno','Estándar','Estado pago']];
+  var ppTotal=parapagarRows.reduce(function(a,r){return a+r[2];},0);
+  var ppRows=ppHeader.concat(parapagarRows);
+  ppRows.push(['','','','','','','','']);
+  ppRows.push(['TOTAL PERSONAS: '+parapagarRows.length,'','TOTAL TURNOS: '+ppTotal,'','','','','']);
+  var ws3=XLSX.utils.aoa_to_sheet(ppRows);
+  ws3['!cols']=[{wch:28},{wch:16},{wch:16},{wch:8},{wch:8},{wch:12},{wch:12},{wch:16}];
+  XLSX.utils.book_append_sheet(wb,ws3,'Para Pagar');
+
   var suffix=periodFilter||'todos';
   XLSX.writeFile(wb,'Pagos_'+suffix+'.xlsx');
-  showToast('Excel de pagos descargado','ok');
+  showToast('Excel de pagos descargado ('+parapagarRows.length+' personas con turnos asistidos)','ok');
 }
 
 function exportOverviewExcel(){
