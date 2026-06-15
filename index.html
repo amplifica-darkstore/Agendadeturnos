@@ -1117,8 +1117,13 @@ function downloadCSV(content,filename){
 }
 function exportCSV(){
   if(!shifts.length){showToast('No hay turnos creados aún','err');return;}
-  const rows=[['Nombre','RUT','Sucursal','Turno','Horario','Fecha','Fecha Inscripción']];
-  shifts.forEach(s=>{(s.enrolled||[]).forEach(e=>{rows.push([e.name,e.rut,s.branch,s.shift,getHorario(s),fmtDateFull(s.date),fmtTs(e.enrolledAt)]);});});
+  const rows=[['Nombre','RUT','Sucursal','Tipo turno','Horario','Fecha','Fecha Inscripción','Asistencia','Estado pago','Observaciones']];
+  shifts.forEach(s=>{(s.enrolled||[]).forEach(e=>{
+    var asis=normalizeAsistio(e.asistio);
+    var d=parseDate(s.date);var isFuture=d&&d>=new Date(new Date().setHours(0,0,0,0));
+    var asisLabel=isFuture&&(asis==='Pendiente'||!asis)?'Programado':asis;
+    rows.push([e.name,e.rut,s.branch,s.shift,getHorario(s),fmtDateFull(s.date),fmtTs(e.enrolledAt),asisLabel,e.pago||'Pendiente',e.obs||'']);
+  });});
   if(rows.length===1){showToast('Aún no hay personas inscritas','err');return;}
   downloadCSV(rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n'),'Inscritos_CyberJunio2026.csv');
   document.getElementById('export-status').textContent=`✓ Descargado: ${rows.length-1} inscrito${rows.length-1===1?'':'s'}`;
@@ -1264,12 +1269,18 @@ function renderOverview(){
           html+='<div style="background:#E2E8F0;border-radius:99px;height:4px;overflow:hidden;margin-bottom:6px"><div style="height:100%;width:'+Math.min(pct,100)+'%;background:'+fillColor+';border-radius:99px"></div></div>';
           html+='<div style="font-size:11px;font-weight:700;color:#1E293B;margin-bottom:'+(en.length?'7px':'0')+'">'+en.length+' / '+s.limit+' inscritos</div>';
           if(en.length){
-            html+='<div style="display:flex;flex-direction:column;gap:4px;max-height:130px;overflow-y:auto">';
+            html+='<div style="display:flex;flex-direction:column;gap:4px;max-height:160px;overflow-y:auto">';
             en.forEach(function(e,i){
               const initls=e.name.split(' ').map(function(x){return x[0]||'';}).join('').slice(0,2).toUpperCase();
+              var asis=normalizeAsistio(e.asistio);
+              var dd=parseDate(s.date);var isFut=dd&&dd>=new Date(new Date().setHours(0,0,0,0));
+              var asisLbl=isFut&&(asis==='Pendiente'||!asis)?'Prog.':asis==='Sí'?'✓':asis==='No'?'✗':asis==='Cancelado'?'Canc.':'?';
+              var asisCol=asis==='Sí'?'#166534':asis==='No'?'#991B1B':asis==='Cancelado'?'#475569':isFut?'#1E40AF':'#92400E';
+              var asisBg=asis==='Sí'?'#DCFCE7':asis==='No'?'#FEE2E2':asis==='Cancelado'?'#F1F5F9':isFut?'#DBEAFE':'#FEF3C7';
               html+='<div style="display:flex;align-items:center;gap:6px;padding-bottom:'+(i<en.length-1?'4px':'0')+';border-bottom:'+(i<en.length-1?'1px solid rgba(0,0,0,0.06)':'none')+'">';
               html+='<div style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#185FA5,#1D9E75);display:flex;align-items:center;justify-content:center;color:white;font-size:8px;font-weight:700;flex-shrink:0">'+initls+'</div>';
-              html+='<div><div style="font-size:11px;font-weight:600;color:#1E293B;line-height:1.2">'+e.name+'</div><div style="font-size:9px;color:#94A3B8;font-family:monospace">'+e.rut+'</div></div>';
+              html+='<div style="flex:1"><div style="font-size:11px;font-weight:600;color:#1E293B;line-height:1.2">'+e.name+'</div><div style="font-size:9px;color:#94A3B8;font-family:monospace">'+e.rut+'</div></div>';
+              html+='<span style="font-size:8px;font-weight:700;color:'+asisCol+';background:'+asisBg+';border-radius:99px;padding:1px 5px;flex-shrink:0">'+asisLbl+'</span>';
               html+='</div>';
             });
             html+='</div>';
@@ -3290,14 +3301,16 @@ function renderPagos(){
   var totalAsistio=filtered.reduce(function(a,p){return a+p.shifts.filter(function(s){return s.asistio==='Sí';}).length;},0);
   var totalPendiente=filtered.reduce(function(a,p){return a+p.shifts.filter(function(s){return !s.isFuture&&(s.asistio==='Pendiente'||!s.asistio);}).length;},0);
   var totalNoAsistio=filtered.reduce(function(a,p){return a+p.shifts.filter(function(s){return s.asistio==='No';}).length;},0);
+  var totalCancelado=filtered.reduce(function(a,p){return a+p.shifts.filter(function(s){return s.asistio==='Cancelado';}).length;},0);
   var totalProgramado=filtered.reduce(function(a,p){return a+p.shifts.filter(function(s){return s.isFuture&&(s.asistio==='Pendiente'||!s.asistio);}).length;},0);
 
   var html='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px">';
   html+='<div style="background:white;border-radius:12px;border:1px solid #E2E8F0;padding:12px 16px;text-align:center"><div style="font-size:10px;color:#64748B;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Personas</div><div style="font-size:22px;font-weight:700;color:#185FA5">'+totalPeople+'</div></div>';
-  html+='<div style="background:white;border-radius:12px;border:1px solid #E2E8F0;padding:12px 16px;text-align:center"><div style="font-size:10px;color:#64748B;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Total turnos</div><div style="font-size:22px;font-weight:700;color:#1E293B">'+totalShifts+'</div></div>';
+  html+='<div style="background:white;border-radius:12px;border:1px solid #E2E8F0;padding:12px 16px;text-align:center"><div style="font-size:10px;color:#64748B;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Total inscritos</div><div style="font-size:22px;font-weight:700;color:#1E293B">'+totalShifts+'</div></div>';
   html+='<div style="background:#F0FDF4;border-radius:12px;border:1px solid #86EFAC;padding:12px 16px;text-align:center"><div style="font-size:10px;color:#166534;font-weight:600;text-transform:uppercase;letter-spacing:.5px">✓ Asistió</div><div style="font-size:22px;font-weight:700;color:#166534">'+totalAsistio+'</div></div>';
   html+='<div style="background:#FFFBEB;border-radius:12px;border:1px solid #FDE68A;padding:12px 16px;text-align:center"><div style="font-size:10px;color:#92400E;font-weight:600;text-transform:uppercase;letter-spacing:.5px">? Pendiente</div><div style="font-size:22px;font-weight:700;color:#92400E">'+totalPendiente+'</div></div>';
   html+='<div style="background:#FEF2F2;border-radius:12px;border:1px solid #FECACA;padding:12px 16px;text-align:center"><div style="font-size:10px;color:#991B1B;font-weight:600;text-transform:uppercase;letter-spacing:.5px">✗ No asistió</div><div style="font-size:22px;font-weight:700;color:#991B1B">'+totalNoAsistio+'</div></div>';
+  if(totalCancelado>0)html+='<div style="background:#F8FAFC;border-radius:12px;border:1px solid #CBD5E1;padding:12px 16px;text-align:center"><div style="font-size:10px;color:#475569;font-weight:600;text-transform:uppercase;letter-spacing:.5px">✕ Cancelado</div><div style="font-size:22px;font-weight:700;color:#475569">'+totalCancelado+'</div></div>';
   html+='<div style="background:#EFF6FF;border-radius:12px;border:1px solid #93C5FD;padding:12px 16px;text-align:center"><div style="font-size:10px;color:#1E40AF;font-weight:600;text-transform:uppercase;letter-spacing:.5px">▸ Programado</div><div style="font-size:22px;font-weight:700;color:#1E40AF">'+totalProgramado+'</div></div>';
   html+='</div>';
 
@@ -3311,9 +3324,10 @@ function renderPagos(){
   html+='<th style="padding:10px 6px;text-align:center;font-weight:700;white-space:nowrap;background:#553C7B">PM</th>';
   html+='<th style="padding:10px 6px;text-align:center;font-weight:700;white-space:nowrap;background:#1B3A4B">Noct.</th>';
   html+='<th style="padding:10px 6px;text-align:center;font-weight:700;white-space:nowrap;background:#2D6A4F">Est.</th>';
-  html+='<th style="padding:10px 6px;text-align:center;font-weight:700;white-space:nowrap;background:#166534">✓ Total asistidos</th>';
+  html+='<th style="padding:10px 6px;text-align:center;font-weight:700;white-space:nowrap;background:#166534">✓ Asistidos</th>';
   html+='<th style="padding:10px 6px;text-align:center;font-weight:700;white-space:nowrap;background:#92400E">? Pend.</th>';
   html+='<th style="padding:10px 6px;text-align:center;font-weight:700;white-space:nowrap;background:#991B1B">✗ No</th>';
+  html+='<th style="padding:10px 6px;text-align:center;font-weight:700;white-space:nowrap;background:#475569">Canc.</th>';
   html+='<th style="padding:10px 6px;text-align:center;font-weight:700;white-space:nowrap;background:#1E40AF">Prog.</th>';
   html+='<th style="padding:10px 8px;text-align:left;font-weight:700;white-space:nowrap">Estado pago</th>';
   html+='</tr></thead><tbody>';
@@ -3322,16 +3336,18 @@ function renderPagos(){
     var asistidos=p.shifts.filter(function(s){return s.asistio==='Sí';});
     var pendiente=p.shifts.filter(function(s){return !s.isFuture&&(s.asistio==='Pendiente'||!s.asistio);});
     var noAsistio=p.shifts.filter(function(s){return s.asistio==='No';});
+    var cancelado=p.shifts.filter(function(s){return s.asistio==='Cancelado';});
     var programado=p.shifts.filter(function(s){return s.isFuture&&(s.asistio==='Pendiente'||!s.asistio);});
     // Desglose por tipo de turno (solo asistidos)
     var amAsis=asistidos.filter(function(s){return s.shift==='AM';}).length;
     var pmAsis=asistidos.filter(function(s){return s.shift==='PM';}).length;
     var nocAsis=asistidos.filter(function(s){return s.shift==='Nocturno';}).length;
     var estAsis=asistidos.filter(function(s){return s.shift!=='AM'&&s.shift!=='PM'&&s.shift!=='Nocturno';}).length;
-    // Estado de pago
-    var pagoStatus=p.shifts[0]&&p.shifts[0].pago?p.shifts[0].pago:'Pendiente';
-    var pagoBg=pagoStatus==='Pendiente'?'#FEF3C7':'#DCFCE7';
-    var pagoColor=pagoStatus==='Pendiente'?'#92400E':'#166534';
+    // Estado de pago — agregar de todos los turnos
+    var pagados=p.shifts.filter(function(s){return s.pago&&s.pago!=='Pendiente';}).length;
+    var pagoStatus=pagados===asistidos.length&&asistidos.length>0?'Pagado':pagados>0?'Parcial ('+pagados+'/'+asistidos.length+')':'Pendiente';
+    var pagoBg=pagoStatus==='Pendiente'?'#FEF3C7':pagoStatus==='Pagado'?'#DCFCE7':'#DBEAFE';
+    var pagoColor=pagoStatus==='Pendiente'?'#92400E':pagoStatus==='Pagado'?'#166534':'#1E40AF';
 
     var bg=idx%2===0?'#FFFFFF':'#F8FAFC';
     html+='<tr style="background:'+bg+';border-bottom:1px solid #E2E8F0;cursor:pointer" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display===\'none\'?\'table-row\':\'none\'">';
@@ -3344,23 +3360,26 @@ function renderPagos(){
     html+='<td style="padding:8px 6px;text-align:center;font-weight:800;font-size:15px;color:#166534">'+asistidos.length+'</td>';
     html+='<td style="padding:8px 6px;text-align:center;font-weight:700;color:#92400E">'+(pendiente.length||'-')+'</td>';
     html+='<td style="padding:8px 6px;text-align:center;font-weight:700;color:#991B1B">'+(noAsistio.length||'-')+'</td>';
+    html+='<td style="padding:8px 6px;text-align:center;font-weight:700;color:#475569">'+(cancelado.length||'-')+'</td>';
     html+='<td style="padding:8px 6px;text-align:center;font-weight:700;color:#1E40AF">'+(programado.length||'-')+'</td>';
     html+='<td style="padding:8px"><span style="font-size:10px;font-weight:700;color:'+pagoColor+';background:'+pagoBg+';border-radius:99px;padding:2px 8px">'+pagoStatus+'</span></td>';
     html+='</tr>';
     // Fila expandible con detalle
     var sortedShifts=p.shifts.slice().sort(function(a,b){return a.date.localeCompare(b.date);});
     var detHtml='<table style="width:100%;font-size:11px;border-collapse:collapse;margin:4px 0">';
-    detHtml+='<tr style="color:#64748B;font-size:10px"><td style="padding:2px 6px;font-weight:600">Fecha</td><td style="padding:2px 6px;font-weight:600">Sucursal</td><td style="padding:2px 6px;font-weight:600">Tipo</td><td style="padding:2px 6px;font-weight:600">Horario</td><td style="padding:2px 6px;font-weight:600">Asistencia</td><td style="padding:2px 6px;font-weight:600">Obs</td></tr>';
+    detHtml+='<tr style="color:#64748B;font-size:10px"><td style="padding:2px 6px;font-weight:600">Fecha</td><td style="padding:2px 6px;font-weight:600">Sucursal</td><td style="padding:2px 6px;font-weight:600">Tipo</td><td style="padding:2px 6px;font-weight:600">Horario</td><td style="padding:2px 6px;font-weight:600">Asistencia</td><td style="padding:2px 6px;font-weight:600">Pago</td><td style="padding:2px 6px;font-weight:600">Obs</td></tr>';
     sortedShifts.forEach(function(s){
       var isFP=s.isFuture&&(s.asistio==='Pendiente'||!s.asistio);
       var ac=s.asistio==='Sí'?'#166534':s.asistio==='No'?'#991B1B':isFP?'#1E40AF':'#92400E';
       var ab=s.asistio==='Sí'?'#DCFCE7':s.asistio==='No'?'#FEE2E2':isFP?'#DBEAFE':'#FEF3C7';
       var at=isFP?'Programado':s.asistio;
       var badge=s.shift==='AM'?'b-am':s.shift==='PM'?'b-pm':s.shift==='Nocturno'?'b-noc':'b-am';
-      detHtml+='<tr style="border-top:1px solid #F1F5F9"><td style="padding:3px 6px">'+fmtDate(s.date)+'</td><td style="padding:3px 6px;color:#475569">'+s.branch+'</td><td style="padding:3px 6px"><span class="badge '+badge+'" style="font-size:9px;padding:1px 6px">'+s.shift+'</span></td><td style="padding:3px 6px;color:#64748B;font-size:10px">'+s.horario+'</td><td style="padding:3px 6px"><span style="font-size:10px;font-weight:700;color:'+ac+';background:'+ab+';border-radius:99px;padding:1px 6px">'+at+'</span></td><td style="padding:3px 6px;color:#64748B;font-style:italic;font-size:10px">'+(s.obs||'')+'</td></tr>';
+      var pc=s.pago&&s.pago!=='Pendiente'?'#166534':'#92400E';
+      var pb=s.pago&&s.pago!=='Pendiente'?'#DCFCE7':'#FEF3C7';
+      detHtml+='<tr style="border-top:1px solid #F1F5F9"><td style="padding:3px 6px">'+fmtDate(s.date)+'</td><td style="padding:3px 6px;color:#475569">'+s.branch+'</td><td style="padding:3px 6px"><span class="badge '+badge+'" style="font-size:9px;padding:1px 6px">'+s.shift+'</span></td><td style="padding:3px 6px;color:#64748B;font-size:10px">'+s.horario+'</td><td style="padding:3px 6px"><span style="font-size:10px;font-weight:700;color:'+ac+';background:'+ab+';border-radius:99px;padding:1px 6px">'+at+'</span></td><td style="padding:3px 6px"><span style="font-size:10px;font-weight:700;color:'+pc+';background:'+pb+';border-radius:99px;padding:1px 6px">'+s.pago+'</span></td><td style="padding:3px 6px;color:#64748B;font-style:italic;font-size:10px">'+(s.obs||'')+'</td></tr>';
     });
     detHtml+='</table>';
-    html+='<tr style="display:none;background:#F8FAFC"><td colspan="11" style="padding:6px 16px">'+detHtml+'</td></tr>';
+    html+='<tr style="display:none;background:#F8FAFC"><td colspan="12" style="padding:6px 16px">'+detHtml+'</td></tr>';
   });
   html+='</tbody></table></div>';
   html+='<p style="font-size:10px;color:#94A3B8;margin-top:8px;text-align:center">Haz clic en una fila para ver el detalle de turnos</p>';
@@ -3374,7 +3393,7 @@ function exportPagosExcel(){
   var wb=XLSX.utils.book_new();
 
   // Hoja 1: Resumen por persona (sin duplicados)
-  var resRows=[['Nombre','RUT','Total turnos inscritos','Total asistidos','AM asistidos','PM asistidos','Nocturno asistidos','Estándar asistidos','Pendiente confirmación','No asistió','Programado (futuro)','Estado pago']];
+  var resRows=[['Nombre','RUT','Total inscritos','Total asistidos','AM asistidos','PM asistidos','Nocturno asistidos','Estándar asistidos','Pendiente confirmación','No asistió','Cancelado','Programado (futuro)','Estado pago']];
   // Hoja 2: Detalle turno a turno
   var detRows=[['Nombre','RUT','Fecha','Sucursal','Tipo turno','Horario','Periodo','Asistencia','Estado pago','Observaciones']];
   // Datos para hoja 3
@@ -3390,13 +3409,15 @@ function exportPagosExcel(){
     var asistidos=sh.filter(function(s){return s.asistio==='Sí';});
     var pendiente=sh.filter(function(s){return !s.isFuture&&(s.asistio==='Pendiente'||!s.asistio);}).length;
     var noAsistio=sh.filter(function(s){return s.asistio==='No';}).length;
+    var canceladoCount=sh.filter(function(s){return s.asistio==='Cancelado';}).length;
     var programado=sh.filter(function(s){return s.isFuture&&(s.asistio==='Pendiente'||!s.asistio);}).length;
     var amAsis=asistidos.filter(function(s){return s.shift==='AM';}).length;
     var pmAsis=asistidos.filter(function(s){return s.shift==='PM';}).length;
     var nocAsis=asistidos.filter(function(s){return s.shift==='Nocturno';}).length;
     var estAsis=asistidos.filter(function(s){return s.shift!=='AM'&&s.shift!=='PM'&&s.shift!=='Nocturno';}).length;
-    var pagoStatus=sh[0]&&sh[0].pago?sh[0].pago:'Pendiente';
-    resRows.push([p.name,p.rut,sh.length,asistidos.length,amAsis,pmAsis,nocAsis,estAsis,pendiente,noAsistio,programado,pagoStatus]);
+    var pagados=sh.filter(function(s){return s.pago&&s.pago!=='Pendiente';}).length;
+    var pagoStatus=pagados===asistidos.length&&asistidos.length>0?'Pagado':pagados>0?'Parcial ('+pagados+'/'+asistidos.length+')':'Pendiente';
+    resRows.push([p.name,p.rut,sh.length,asistidos.length,amAsis,pmAsis,nocAsis,estAsis,pendiente,noAsistio,canceladoCount,programado,pagoStatus]);
     sh.slice().sort(function(a,b){return a.date.localeCompare(b.date);}).forEach(function(s){
       var asisExcel=s.isFuture&&(s.asistio==='Pendiente'||!s.asistio)?'Programado':s.asistio;
       detRows.push([p.name,p.rut,s.date,s.branch,s.shift,s.horario,s.periodLabel,asisExcel,s.pago,s.obs||'']);
@@ -3410,7 +3431,7 @@ function exportPagosExcel(){
   parapagarRows.sort(function(a,b){return a[0].localeCompare(b[0]);});
 
   var ws1=XLSX.utils.aoa_to_sheet(resRows);
-  ws1['!cols']=[{wch:24},{wch:14},{wch:14},{wch:14},{wch:13},{wch:13},{wch:16},{wch:16},{wch:18},{wch:12},{wch:18},{wch:14}];
+  ws1['!cols']=[{wch:24},{wch:14},{wch:14},{wch:14},{wch:13},{wch:13},{wch:16},{wch:16},{wch:18},{wch:12},{wch:12},{wch:18},{wch:14}];
   XLSX.utils.book_append_sheet(wb,ws1,'Resumen pagos');
 
   var ws2=XLSX.utils.aoa_to_sheet(detRows);
@@ -3453,36 +3474,42 @@ function exportOverviewExcel(){
   ws1['!cols']=[{wch:16},{wch:28},{wch:10},{wch:18},{wch:18},{wch:14},{wch:10},{wch:14},{wch:12}];
   XLSX.utils.book_append_sheet(wb,ws1,'Resumen turnos');
 
-  // Sheet 2: Lista de inscritos
-  const inscRows=[['Nombre','RUT','Sucursal','Dirección','Turno','Horario','Fecha','Fecha inscripción']];
+  // Sheet 2: Lista de inscritos con asistencia para revisión
+  const inscRows=[['Nombre','RUT','Sucursal','Dirección','Tipo turno','Horario','Fecha','Fecha inscripción','Asistencia','Estado pago','Observaciones']];
   BRANCHES.forEach(branch=>{
     shifts.filter(s=>s.branch===branch).forEach(s=>{
       (s.enrolled||[]).forEach(e=>{
-        inscRows.push([e.name,e.rut,branch,BRANCH_ADDR[branch]||'',s.shift,getHorario(s),fmtDateFull(s.date),fmtTs(e.enrolledAt)]);
+        var asis=normalizeAsistio(e.asistio);
+        var d=parseDate(s.date);var isFuture=d&&d>=new Date(new Date().setHours(0,0,0,0));
+        var asisLabel=isFuture&&(asis==='Pendiente'||!asis)?'Programado':asis;
+        inscRows.push([e.name,e.rut,branch,BRANCH_ADDR[branch]||'',s.shift,getHorario(s),fmtDateFull(s.date),fmtTs(e.enrolledAt),asisLabel,e.pago||'Pendiente',e.obs||'']);
       });
     });
   });
   const ws2=XLSX.utils.aoa_to_sheet(inscRows);
-  ws2['!cols']=[{wch:24},{wch:14},{wch:16},{wch:28},{wch:10},{wch:18},{wch:14},{wch:20}];
+  ws2['!cols']=[{wch:24},{wch:14},{wch:16},{wch:28},{wch:12},{wch:18},{wch:14},{wch:20},{wch:14},{wch:14},{wch:24}];
   XLSX.utils.book_append_sheet(wb,ws2,'Inscritos');
 
   // Sheet 3: Por sucursal y día
   BRANCHES.forEach(branch=>{
     const bShifts=shifts.filter(s=>s.branch===branch);
     if(!bShifts.length)return;
-    const rows=[['Fecha','Turno','Horario','Inscritos','Vacantes','Nombre','RUT']];
+    const rows=[['Fecha','Turno','Horario','Inscritos','Vacantes','Nombre','RUT','Asistencia']];
     bShifts.forEach(s=>{
       const en=s.enrolled||[];
       if(en.length){
         en.forEach((e,i)=>{
-          rows.push([i===0?fmtDateFull(s.date):'',i===0?s.shift:'',i===0?getHorario(s):'',i===0?en.length:'',i===0?Math.max(0,s.limit-en.length):'',e.name,e.rut]);
+          var asis=normalizeAsistio(e.asistio);
+          var dd=parseDate(s.date);var isFut=dd&&dd>=new Date(new Date().setHours(0,0,0,0));
+          var asisLbl=isFut&&(asis==='Pendiente'||!asis)?'Programado':asis;
+          rows.push([i===0?fmtDateFull(s.date):'',i===0?s.shift:'',i===0?getHorario(s):'',i===0?en.length:'',i===0?Math.max(0,s.limit-en.length):'',e.name,e.rut,asisLbl]);
         });
       }else{
-        rows.push([fmtDateFull(s.date),s.shift,getHorario(s),0,s.limit,'Sin inscritos','']);
+        rows.push([fmtDateFull(s.date),s.shift,getHorario(s),0,s.limit,'Sin inscritos','','']);
       }
     });
     const ws=XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols']=[{wch:14},{wch:10},{wch:18},{wch:10},{wch:10},{wch:24},{wch:14}];
+    ws['!cols']=[{wch:14},{wch:10},{wch:18},{wch:10},{wch:10},{wch:24},{wch:14},{wch:14}];
     // Truncate sheet name to 31 chars (Excel limit)
     const sheetName=branch.slice(0,31);
     XLSX.utils.book_append_sheet(wb,ws,sheetName);
