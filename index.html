@@ -2348,13 +2348,21 @@ document.getElementById('a-inp-pass').addEventListener('keydown',e=>{if(e.key===
 // ── Init ──────────────────────────────────────────────────────
 (function(){
   try{
+    const today=new Date(); today.setHours(0,0,0,0);
     const savedPeriod=localStorage.getItem('amp_period');
-    if(savedPeriod){
-      currentMonthKey=savedPeriod;
-      currentMonthDef=MONTH_DEFS.find(function(m){return m.key===savedPeriod;})||MONTH_DEFS[0];
-      const el=document.getElementById('topbar-period-title');
-      if(el)el.textContent=currentMonthDef.label;
+    const savedDef=savedPeriod?MONTH_DEFS.find(function(m){return m.key===savedPeriod;}):null;
+    const savedIsPast=savedDef?new Date(savedDef.dateTo+'T00:00:00')<today:true;
+    let bestDef=null;
+    if(!savedIsPast&&savedDef){
+      bestDef=savedDef;
+    } else {
+      bestDef=MONTH_DEFS.find(function(m){return new Date(m.dateTo+'T00:00:00')>=today;})||MONTH_DEFS[0];
     }
+    currentMonthKey=bestDef.key;
+    currentMonthDef=bestDef;
+    try{localStorage.setItem('amp_period',bestDef.key);}catch(e){}
+    const el=document.getElementById('topbar-period-title');
+    if(el)el.textContent=bestDef.label;
   }catch(e){}
   populateDates();
   populateWeekFilters();
