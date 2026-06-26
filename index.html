@@ -1724,12 +1724,24 @@ function populateAdminSel(){
 }
 
 function renderAdmin(){
-  const total=shifts.length,en=shifts.reduce((a,s)=>a+((s.enrolled||[]).length),0),fr=shifts.reduce((a,s)=>a+Math.max(0,s.limit-(s.enrolled||[]).length),0);
+  // Deduplicate: for each date+branch+shift combo, keep the one with most data (highest limit, then most enrolled)
+  const dedupMap={};
+  shifts.forEach(function(s){
+    const key=s.date+'|'+(s.branch||'')+'|'+(s.shift||'');
+    const prev=dedupMap[key];
+    if(!prev){dedupMap[key]=s;return;}
+    const prevScore=(prev.limit||0)*1000+(prev.enrolled||[]).length;
+    const curScore=(s.limit||0)*1000+(s.enrolled||[]).length;
+    if(curScore>prevScore)dedupMap[key]=s;
+  });
+  const deduped=Object.values(dedupMap);
+  const total=deduped.length,en=deduped.reduce((a,s)=>a+((s.enrolled||[]).length),0),fr=deduped.reduce((a,s)=>a+Math.max(0,s.limit-(s.enrolled||[]).length),0);
   document.getElementById('s-total').textContent=total;
   document.getElementById('s-enrolled').textContent=en;
   document.getElementById('s-free').textContent=fr;
   const r=document.getElementById('admin-roster');
-  if(!shifts.length){r.innerHTML='<div style="text-align:center;padding:24px;color:#94A3B8;font-size:13px"><i class="ti ti-calendar-plus" style="font-size:32px;display:block;margin-bottom:8px"></i>Sin turnos aún. Usa el formulario para crear el primero.</div>';return;}
+  if(!deduped.length){r.innerHTML='<div style="text-align:center;padding:24px;color:#94A3B8;font-size:13px"><i class="ti ti-calendar-plus" style="font-size:32px;display:block;margin-bottom:8px"></i>Sin turnos aún. Usa el formulario para crear el primero.</div>';return;}
+  const shifts_to_render=deduped;
   const fb=document.getElementById('adm-filter-branch');
   const fs=document.getElementById('adm-filter-shift');
   const fw=document.getElementById('adm-filter-week');
@@ -1741,7 +1753,7 @@ function renderAdmin(){
   const filterWeek=fw?parseInt(fw.value)||0:0;
   const filterQuery=fq?fq.value.trim().toLowerCase():'';
   const todayAdm=new Date(); todayAdm.setHours(0,0,0,0);
-  const filteredShifts=shifts.filter(function(s){
+  const filteredShifts=shifts_to_render.filter(function(s){
     if(filterBranch&&s.branch!==filterBranch)return false;
     if(filterShift&&s.shift!==filterShift)return false;
     if(filterWeek&&weekOf(s.date)!==parseInt(filterWeek))return false;
