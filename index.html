@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -455,6 +455,10 @@ body { font-family: 'DM Sans', sans-serif; font-size: 14px; background: var(--gr
       <label onclick="renderWorker()" style="display:inline-flex;align-items:center;gap:6px;padding:9px 12px;border:1.5px solid #E2E8F0;border-radius:10px;font-size:14px;font-family:'DM Sans',sans-serif;font-weight:500;color:#1E293B;background:white;cursor:pointer;user-select:none" id="lbl-only-available">
         <input type="checkbox" id="f-only-available" onchange="renderWorker()" style="accent-color:#1a1a6e;width:15px;height:15px;cursor:pointer">
         Solo con vacantes
+      </label>
+      <label style="display:inline-flex;align-items:center;gap:6px;padding:9px 12px;border:1.5px solid #185FA5;border-radius:10px;font-size:14px;font-family:'DM Sans',sans-serif;font-weight:500;color:#185FA5;background:#EFF6FF;cursor:pointer;user-select:none">
+        <input type="checkbox" id="f-only-future" onchange="renderWorker()" checked style="accent-color:#185FA5;width:15px;height:15px;cursor:pointer">
+        Solo días futuros
       </label>
       <button class="btn btn-outline btn-sm" onclick="loadAndRenderWorker()"><i class="ti ti-refresh" style="margin-right:4px"></i>Actualizar</button>
     </div>
@@ -1457,11 +1461,11 @@ function renderWorker(){
   renderMisTurnos();
   const br=document.getElementById('f-branch').value,sh=document.getElementById('f-shift').value,wk=document.getElementById('f-week').value;
   const onlyAvail=document.getElementById('f-only-available')&&document.getElementById('f-only-available').checked;
+  const onlyFuture=document.getElementById('f-only-future')&&document.getElementById('f-only-future').checked;
   const list=shifts.filter(s=>{
-    // Exclude past shifts (before today) in the inscription view
     const sd=parseDate(s.date);
     const today=new Date(); today.setHours(0,0,0,0);
-    if(sd&&sd<today)return false;
+    if(onlyFuture&&sd&&sd<today)return false;
     if(br&&s.branch!==br)return false;
     if(sh&&s.shift!==sh)return false;
     if(wk&&weekOf(s.date)!==parseInt(wk))return false;
