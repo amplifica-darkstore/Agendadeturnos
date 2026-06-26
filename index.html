@@ -1470,7 +1470,7 @@ function renderWorker(){
   const list=shifts.filter(s=>{
     const sd=parseDate(s.date);
     const today=new Date(); today.setHours(0,0,0,0);
-    if(onlyFuture&&sd&&sd<today)return false;
+    if(onlyFuture&&(!sd||sd<today))return false;
     if(br&&s.branch!==br)return false;
     if(sh&&s.shift!==sh)return false;
     if(wk&&weekOf(s.date)!==parseInt(wk))return false;
@@ -1551,6 +1551,44 @@ function renderWorker(){
         const dayShifts=w3.filter(s=>fmtDateISO(s.date)===date);
         html+=`<div style="min-width:200px;flex:1;max-width:260px">
           <div style="font-size:14px;font-weight:800;color:#5B21B6;margin-bottom:8px;padding:8px 12px;background:#F5F3FF;border-radius:8px;border-bottom:2px solid #7C3AED">${fmtDate(date)}</div>
+          <div style="display:flex;flex-direction:column;gap:8px">${dayShifts.map(s=>shiftCardCompact(s)).join('')}</div>
+        </div>`;
+      });
+      html+=`</div>`;
+    }
+
+    const w4=bList.filter(s=>weekOf(s.date)===4);
+    if(w4.length){
+      html+=`<div style="font-size:11px;font-weight:700;color:#475569;padding:5px 12px;background:white;border-radius:8px;border-left:4px solid #EA580C;display:inline-block;margin-bottom:10px"><i class="ti ti-calendar" style="margin-right:5px"></i>${getWeekLabel(4)}</div>`;
+      const dates4=[...new Set(w4.map(s=>fmtDateISO(s.date)))].sort((a,b)=>{
+          const da=parseDate(a),db=parseDate(b);
+          if(!da||!db)return 0;
+          return da-db;
+        });
+      html+=`<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">`;
+      dates4.forEach(date=>{
+        const dayShifts=w4.filter(s=>fmtDateISO(s.date)===date);
+        html+=`<div style="min-width:200px;flex:1;max-width:260px">
+          <div style="font-size:14px;font-weight:800;color:#C2410C;margin-bottom:8px;padding:8px 12px;background:#FFF7ED;border-radius:8px;border-bottom:2px solid #EA580C">${fmtDate(date)}</div>
+          <div style="display:flex;flex-direction:column;gap:8px">${dayShifts.map(s=>shiftCardCompact(s)).join('')}</div>
+        </div>`;
+      });
+      html+=`</div>`;
+    }
+
+    const w5=bList.filter(s=>weekOf(s.date)===5);
+    if(w5.length){
+      html+=`<div style="font-size:11px;font-weight:700;color:#475569;padding:5px 12px;background:white;border-radius:8px;border-left:4px solid #0891B2;display:inline-block;margin-bottom:10px"><i class="ti ti-calendar" style="margin-right:5px"></i>${getWeekLabel(5)}</div>`;
+      const dates5=[...new Set(w5.map(s=>fmtDateISO(s.date)))].sort((a,b)=>{
+          const da=parseDate(a),db=parseDate(b);
+          if(!da||!db)return 0;
+          return da-db;
+        });
+      html+=`<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px">`;
+      dates5.forEach(date=>{
+        const dayShifts=w5.filter(s=>fmtDateISO(s.date)===date);
+        html+=`<div style="min-width:200px;flex:1;max-width:260px">
+          <div style="font-size:14px;font-weight:800;color:#0E7490;margin-bottom:8px;padding:8px 12px;background:#ECFEFF;border-radius:8px;border-bottom:2px solid #0891B2">${fmtDate(date)}</div>
           <div style="display:flex;flex-direction:column;gap:8px">${dayShifts.map(s=>shiftCardCompact(s)).join('')}</div>
         </div>`;
       });
@@ -1645,6 +1683,8 @@ async function enroll(id){
   }
   if(!s.enrolled)s.enrolled=[];
   if(s.enrolled.some(e=>normRutKey(e.rut)===normRutKey(myRut))){showToast('Ya estás inscrito en este turno','info');return;}
+  const _sd=parseDate(s.date);const _now=new Date();_now.setHours(0,0,0,0);
+  if(_sd&&_sd<_now){showToast('Este turno ya pasó. No puedes inscribirte en turnos pasados.','err');return;}
   const cr=hasConflict(myRut,s.shift,s.date);
   if(cr.conflict){showToast(cr.reason,'err');return;}
   if(s.enrolled.length>=s.limit){showToast('No quedan vacantes','err');return;}
