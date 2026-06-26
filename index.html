@@ -903,6 +903,9 @@ function onRutInput(inp){
 }
 function onRutFmt(inp){inp.value=formatRut(inp.value);}
 function hasConflict(rut,type,date){
+  if(!rut)return{conflict:false,reason:''};
+  const rutKey=normRutKey(rut);
+  if(!rutKey)return{conflict:false,reason:''};
   // Helper: get Date object from shift date string (robust parsing)
   function parseShiftDate(d){
     const iso=String(d).match(/(\d{4})-(\d{2})-(\d{2})/);
@@ -916,14 +919,14 @@ function hasConflict(rut,type,date){
   const thisISO=fmtDateISO(date);
 
   // Max 1 turno por día (cualquier sucursal, cualquier tipo)
-  if(shifts.some(s=>fmtDateISO(s.date)===thisISO&&(s.enrolled||[]).some(e=>e.rut===rut)))
+  if(shifts.some(s=>fmtDateISO(s.date)===thisISO&&(s.enrolled||[]).some(e=>normRutKey(e.rut)===rutKey)))
     return{conflict:true,reason:'Ya tienes un turno ese día (máx. 1 por día)'};
 
   // Max 5 turnos por semana
   const isoWeek=function(d){const j=new Date(d.getFullYear(),0,1);return Math.ceil(((d-j)/86400000+j.getDay()+1)/7);};
   const tWeek=isoWeek(thisDate),tYear=thisDate.getFullYear();
   const weekCount=shifts.filter(s=>{
-    if(!(s.enrolled||[]).some(e=>e.rut===rut))return false;
+    if(!(s.enrolled||[]).some(e=>normRutKey(e.rut)===rutKey))return false;
     const sd=parseShiftDate(s.date);
     return isoWeek(sd)===tWeek&&sd.getFullYear()===tYear;
   }).length;
@@ -932,7 +935,7 @@ function hasConflict(rut,type,date){
   // Same-day overlaps: AM+PM, PM+Nocturno
   const overlaps={AM:['PM'],PM:['AM','Nocturno'],Nocturno:['PM']};
   for(const other of (overlaps[type]||[])){
-    if(shifts.some(s=>s.shift===other&&fmtDateISO(s.date)===thisISO&&(s.enrolled||[]).some(e=>e.rut===rut)))
+    if(shifts.some(s=>s.shift===other&&fmtDateISO(s.date)===thisISO&&(s.enrolled||[]).some(e=>normRutKey(e.rut)===rutKey)))
       return{conflict:true,reason:`El turno ${type} se solapa con el turno ${other} que ya tienes ese día`};
   }
 
@@ -940,13 +943,13 @@ function hasConflict(rut,type,date){
   // Si quiero tomar AM de hoy, verificar que no tenga Nocturno AYER
   if(type==='AM'){
     const prevDate=new Date(thisDate); prevDate.setDate(prevDate.getDate()-1);
-    if(shifts.some(s=>s.shift==='Nocturno'&&(s.enrolled||[]).some(e=>e.rut===rut)&&parseShiftDate(s.date).toDateString()===prevDate.toDateString()))
+    if(shifts.some(s=>s.shift==='Nocturno'&&(s.enrolled||[]).some(e=>normRutKey(e.rut)===rutKey)&&parseShiftDate(s.date).toDateString()===prevDate.toDateString()))
       return{conflict:true,reason:'Tienes Nocturno la noche anterior (termina a las 07:30)'};
   }
   // Si quiero tomar Nocturno hoy, verificar que no tenga AM MAÑANA
   if(type==='Nocturno'){
     const nextDate=new Date(thisDate); nextDate.setDate(nextDate.getDate()+1);
-    if(shifts.some(s=>s.shift==='AM'&&(s.enrolled||[]).some(e=>e.rut===rut)&&parseShiftDate(s.date).toDateString()===nextDate.toDateString()))
+    if(shifts.some(s=>s.shift==='AM'&&(s.enrolled||[]).some(e=>normRutKey(e.rut)===rutKey)&&parseShiftDate(s.date).toDateString()===nextDate.toDateString()))
       return{conflict:true,reason:'Tienes turno AM al día siguiente (el Nocturno termina a las 07:30)'};
   }
 
