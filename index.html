@@ -1362,6 +1362,7 @@ async function loadShifts(){
     if(res&&res.shifts){
       const def=currentMonthDef||MONTH_DEFS[0];
       const valid=res.shifts.filter(function(s){
+        if(s.archived)return false;
         const iso=fmtDateISO(s.date);
         if(!iso||iso==='?')return false;
         return iso>=def.dateFrom&&iso<=def.dateTo;
