@@ -1233,6 +1233,8 @@ function clearPersonSearchAdmin() {
 
 const MANTENCION_RUTS=['265381499'];
 async function doLoginWorker(){
+  showModal('info','Esta app ya no está disponible',`<p style="font-size:15px;color:#334155;margin:0">Para tomar turnos debes ingresar a la nueva app:</p><a href="https://app-rrhh-seven.vercel.app/" target="_blank" style="display:inline-block;margin-top:14px;padding:10px 20px;background:#1D9E75;color:white;border-radius:8px;font-weight:700;font-size:15px;text-decoration:none">Ir a la nueva app →</a>`);
+  return;
   const name=document.getElementById('w-inp-name').value.trim(),rut=document.getElementById('w-inp-rut').value.trim();
   if(!name){showToast('Ingresa tu nombre completo','err');return;}
   if(!validateRut(rut)){showToast('RUT inválido. Revisa el formato','err');return;}
