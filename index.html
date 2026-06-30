@@ -2102,10 +2102,8 @@ function renderHistory(){
       ${myE&&myE.enrolledAt?`<div style="font-size:10px;color:#94A3B8;margin-top:4px">Inscrito el ${fmtTs(myE.enrolledAt)}</div>`:''}
       ${myE?(()=>{
         const aCol={'Sí':'#059669','No':'#EF4444','Pendiente':'#F59E0B'}[myE.asistio]||'#94A3B8';
-        const pCol={'Pagado':'#059669','1ra Quincena':'#185FA5','2da Quincena':'#7C3AED','Pendiente':'#F59E0B'}[myE.pago]||'#94A3B8';
         const aLbl=myE.asistio?myE.asistio:'—';
-        const pLbl=myE.pago?myE.pago:'—';
-        return `<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><span style="font-size:10px;font-weight:600;padding:2px 9px;border-radius:99px;background:${aCol}22;color:${aCol};border:1px solid ${aCol}44">Asistencia: ${aLbl}</span><span style="font-size:10px;font-weight:600;padding:2px 9px;border-radius:99px;background:${pCol}22;color:${pCol};border:1px solid ${pCol}44">Pago: ${pLbl}</span></div>`;
+        return `<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap"><span style="font-size:10px;font-weight:600;padding:2px 9px;border-radius:99px;background:${aCol}22;color:${aCol};border:1px solid ${aCol}44">Asistencia: ${aLbl}</span></div>`;
       })():''}
     </div>`;
   });
